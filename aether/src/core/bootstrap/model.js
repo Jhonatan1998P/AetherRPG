@@ -14,6 +14,7 @@ import { createPersistenceModule } from '../state/persistence.js';
     SLOT_ORDER,
     ITEM_BASES,
     ITEM_ARCHETYPES,
+    FORGE_SET_RESONANCE,
     ENEMY_ARCHETYPES,
     STAT_BUDGETS,
     AFFIXES,
@@ -41,6 +42,8 @@ import { createPersistenceModule } from '../state/persistence.js';
 
   const statsDomain = createStatsDomain({
     SLOT_ORDER,
+    ITEM_ARCHETYPES,
+    FORGE_SET_RESONANCE,
     emptyStats,
     addStats,
     softRound,
@@ -124,6 +127,7 @@ import { createPersistenceModule } from '../state/persistence.js';
     getRelicBonus,
     getEquipmentBonus,
     getTrainingBonus,
+    getSetResonanceBonus,
     getDerivedStats,
     getLootLuck,
   } = selectors;
@@ -184,6 +188,14 @@ import { createPersistenceModule } from '../state/persistence.js';
       state.player.itemPity = clone(defaults.player.itemPity);
     }
 
+    if (typeof state.player.catalysts !== 'number') {
+      state.player.catalysts = defaults.player.catalysts || 0;
+    }
+
+    if (!state.player.forge || typeof state.player.forge !== 'object') {
+      state.player.forge = clone(defaults.player.forge);
+    }
+
     if (!state.combatDifficulty || typeof state.combatDifficulty !== 'object') {
       state.combatDifficulty = clone(defaults.combatDifficulty);
     }
@@ -207,8 +219,11 @@ import { createPersistenceModule } from '../state/persistence.js';
     if (!state.player.skillLevels) state.player.skillLevels = defaults.player.skillLevels;
     if (!state.player.activeSkills) state.player.activeSkills = defaults.player.activeSkills;
     if (!state.player.unlockedSkills) state.player.unlockedSkills = defaults.player.unlockedSkills;
+    if (typeof state.player.catalysts !== 'number') state.player.catalysts = defaults.player.catalysts || 0;
+    if (!state.player.forge || typeof state.player.forge !== 'object') state.player.forge = defaults.player.forge;
     if (!state.quests) state.quests = defaults.quests;
     if (!state.market || !state.market.items) state.market = defaults.market;
+    state.market.cooldownUntil = Math.max(0, Number(state.market.cooldownUntil || 0));
     if (!state.stats) state.stats = defaults.stats;
     if (!state.claimedAchievements) state.claimedAchievements = [];
     if (!state.combatHistory) state.combatHistory = [];
@@ -225,6 +240,51 @@ import { createPersistenceModule } from '../state/persistence.js';
     state.ui.journalPageSize = Math.max(8, Number(state.ui.journalPageSize) || defaults.ui.journalPageSize);
     if (!state.ui.collapsedCardsByView || typeof state.ui.collapsedCardsByView !== 'object') {
       state.ui.collapsedCardsByView = {};
+    }
+    state.ui.forgeReforgeMode = state.ui.forgeReforgeMode || 'total';
+
+    if (!state.player.forge.actionPity || typeof state.player.forge.actionPity !== 'object') {
+      state.player.forge.actionPity = clone(defaults.player.forge.actionPity);
+    }
+    state.player.forge.actionPity.enhance = Math.max(0, Number(state.player.forge.actionPity.enhance || 0));
+    state.player.forge.actionPity.reforge = Math.max(0, Number(state.player.forge.actionPity.reforge || 0));
+    state.player.forge.actionPity.transcend = Math.max(0, Number(state.player.forge.actionPity.transcend || 0));
+    state.player.forge.actionPity.stabilize = Math.max(0, Number(state.player.forge.actionPity.stabilize || 0));
+    if (!state.player.forge.actionCounters || typeof state.player.forge.actionCounters !== 'object') {
+      state.player.forge.actionCounters = clone(defaults.player.forge.actionCounters);
+    }
+    state.player.forge.actionCounters.craft = Math.max(0, Number(state.player.forge.actionCounters.craft || 0));
+    state.player.forge.actionCounters.enhance = Math.max(0, Number(state.player.forge.actionCounters.enhance || 0));
+    state.player.forge.actionCounters.reforge = Math.max(0, Number(state.player.forge.actionCounters.reforge || 0));
+    state.player.forge.actionCounters.transcend = Math.max(0, Number(state.player.forge.actionCounters.transcend || 0));
+    state.player.forge.actionCounters.stabilize = Math.max(0, Number(state.player.forge.actionCounters.stabilize || 0));
+    state.player.forge.actionCounters.convert = Math.max(0, Number(state.player.forge.actionCounters.convert || 0));
+    if (!state.player.forge.masteryNodes || typeof state.player.forge.masteryNodes !== 'object') {
+      state.player.forge.masteryNodes = {};
+    }
+    if (!state.player.forge.itemRerollChains || typeof state.player.forge.itemRerollChains !== 'object') {
+      state.player.forge.itemRerollChains = {};
+    }
+    state.player.forge.school = state.player.forge.school || defaults.player.forge.school;
+    state.player.forge.masteryPoints = Math.max(0, Number(state.player.forge.masteryPoints || 0));
+    state.player.forge.firstTranscendAt = state.player.forge.firstTranscendAt || null;
+    state.player.forge.firstStabilizeAt = state.player.forge.firstStabilizeAt || null;
+
+    if (!state.stats.craftUsage || typeof state.stats.craftUsage !== 'object') {
+      state.stats.craftUsage = clone(defaults.stats.craftUsage);
+    } else {
+      state.stats.craftUsage.stabilize = Math.max(0, Number(state.stats.craftUsage.stabilize || 0));
+      state.stats.craftUsage.convert = Math.max(0, Number(state.stats.craftUsage.convert || 0));
+    }
+
+    if (!state.stats.telemetry || typeof state.stats.telemetry !== 'object') {
+      state.stats.telemetry = clone(defaults.stats.telemetry);
+    }
+    if (!state.stats.telemetry.forge || typeof state.stats.telemetry.forge !== 'object') {
+      state.stats.telemetry.forge = clone(defaults.stats.telemetry.forge);
+    }
+    if (!Array.isArray(state.stats.telemetry.forge.threatToAffinity)) {
+      state.stats.telemetry.forge.threatToAffinity = [];
     }
     state.combatDifficulty.adaptiveOffset = clamp(Number(state.combatDifficulty.adaptiveOffset || 0), -0.1, 0.1);
     state.combatDifficulty.recentResults = Array.isArray(state.combatDifficulty.recentResults)
@@ -328,6 +388,7 @@ import { createPersistenceModule } from '../state/persistence.js';
     getRelicBonus,
     getEquipmentBonus,
     getTrainingBonus,
+    getSetResonanceBonus,
     getDerivedStats,
     getLootLuck,
     ensureUnlockedSkills,

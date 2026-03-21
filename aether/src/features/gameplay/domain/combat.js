@@ -819,6 +819,7 @@ export function createCombatDomain(deps) {
       essence: 0,
       sigils: 0,
       echoShards: 0,
+      catalysts: 0,
       keys: 0,
       potions: 0,
     };
@@ -844,6 +845,13 @@ export function createCombatDomain(deps) {
     if (score >= 164 && kind === 'boss') {
       const echoChance = clamp(0.06 + zoneId * 0.012 + (score - 154) * 0.0016, 0.06, 0.42);
       reward.echoShards = preview ? Math.round(echoChance) : (Math.random() < echoChance ? 1 : 0);
+    }
+    if (score >= 150 && (kind === 'elite' || kind === 'boss')) {
+      const catalystChance = clamp(0.05 + zoneId * 0.01 + (score - 140) * 0.0018, 0.05, 0.48);
+      const catalystCount = Math.max(1, Math.round(1 + zoneId / 4));
+      reward.catalysts = preview
+        ? Math.round(catalystChance * catalystCount)
+        : (Math.random() < catalystChance ? catalystCount : 0);
     }
     const keyChance = 0.11 + (kind === 'boss' ? 0.06 : kind === 'elite' ? 0.03 : 0);
     if (mode === 'dungeon') {
@@ -881,6 +889,7 @@ export function createCombatDomain(deps) {
       reward.essence = 0;
       reward.sigils = 0;
       reward.echoShards = 0;
+      reward.catalysts = 0;
       reward.keys = 0;
       reward.potions = 0;
       dropProfile.chance = 0;
@@ -950,7 +959,7 @@ export function createCombatDomain(deps) {
 
     enemy.rewardValue = Math.max(
       1,
-      Math.round((rewardProfile.reward.gold || 0) + (rewardProfile.reward.xp || 0) * 0.6 + (rewardProfile.reward.essence || 0) * 20 + (rewardProfile.reward.sigils || 0) * 40 + (rewardProfile.reward.echoShards || 0) * 120),
+      Math.round((rewardProfile.reward.gold || 0) + (rewardProfile.reward.xp || 0) * 0.6 + (rewardProfile.reward.essence || 0) * 20 + (rewardProfile.reward.sigils || 0) * 40 + (rewardProfile.reward.echoShards || 0) * 120 + (rewardProfile.reward.catalysts || 0) * 65),
     );
     enemy.rewardProfile = rewardProfile;
     return enemy;

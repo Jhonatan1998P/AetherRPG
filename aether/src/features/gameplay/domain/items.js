@@ -81,6 +81,17 @@ export function createItemsDomain(deps) {
     return levelBudget[rarityKey] || levelBudget.common || 12;
   }
 
+  function resolveProvenanceRisk(context = {}, threatScore = 100) {
+    if (typeof context.provenanceRisk === 'number') {
+      return clamp(context.provenanceRisk, -0.16, 0.3);
+    }
+    const fromThreat = clamp((Number(threatScore || 100) - 100) / 120, -0.16, 0.3);
+    if (context.source === 'forge') {
+      return clamp(fromThreat * 0.55, -0.08, 0.2);
+    }
+    return fromThreat;
+  }
+
   function deriveQualityRoll(context = {}) {
     if (typeof context.qualityRoll === 'number') {
       return clamp(context.qualityRoll, 0.82, 1.24);
@@ -259,12 +270,15 @@ export function createItemsDomain(deps) {
     const scores = computeItemScores(item);
     const quality = item.qualityRoll || 1;
     const affixCount = (item.affixes || []).length;
+    const stabilize = Math.max(0, Number(item.stabilize || 0));
+    const affinityLevel = Math.max(0, Number(item.affinityLevel || 0));
     const economyValue = Math.max(
       12,
       Math.round(
         (rarity.valueBase + item.itemLevel * 12 + scores.combatScore * 4.3)
         * (0.82 + quality * 0.4)
         * (1 + affixCount * 0.055)
+        * (1 + stabilize * 0.018 + affinityLevel * 0.01)
       ),
     );
     const craftValue = Math.max(
@@ -279,6 +293,8 @@ export function createItemsDomain(deps) {
         ((rarity.order + 1) ** 2) * 48
         + item.itemLevel * 3.2
         + affixCount * 36
+        + stabilize * 28
+        + affinityLevel * 22
         + Math.max(0, quality - 1) * 180,
       ),
     );
@@ -351,7 +367,18 @@ export function createItemsDomain(deps) {
     const qualityRoll = deriveQualityRoll(context);
     const archetype = ITEM_ARCHETYPES[slot] || {};
     const rawBudget = budgetFor(slot, itemLevel, rarity.key);
-    const powerBudget = Math.round(rawBudget * qualityRoll * (archetype.qualityBias || 1) * threatFactor);
+    const provenanceRisk = resolveProvenanceRisk(context, threatScore);
+    const forgePowerBonus = clamp(Number(context.forgePowerBonus || 0), 0, 0.24);
+    const tierFactor = 1 + rarity.order * 0.025;
+    const computedBudget = rawBudget
+      * tierFactor
+      * qualityRoll
+      * (1 + provenanceRisk * 0.18 + forgePowerBonus)
+      * (archetype.qualityBias || 1)
+      * threatFactor;
+    const budgetCeil = rawBudget * (context.source === 'forge' ? 1.14 : 1.2);
+    const budgetFloor = rawBudget * 0.76;
+    const powerBudget = Math.round(clamp(computedBudget, budgetFloor, budgetCeil));
 
     const stats = scaleBaseStats(base.stats, itemLevel, rarity);
     const basePoints = statBudgetPoints(stats);
@@ -374,7 +401,9 @@ export function createItemsDomain(deps) {
       affixes: [],
       upgrade: 0,
       powerBudget,
+      forgeBudget: powerBudget,
       qualityRoll,
+      provenanceRisk,
       provenance: {
         source,
         zoneId: context.zoneId ?? null,
@@ -390,10 +419,14 @@ export function createItemsDomain(deps) {
         bound: false,
         crafted: source === 'forge',
         transcended: false,
+        stabilized: false,
       },
       createdAt: now(),
       reforge: 0,
       transcend: 0,
+      stabilize: 0,
+      affinityXp: 0,
+      affinityLevel: 0,
     };
 
     applyAffixesWithBudget(item, {
@@ -568,8 +601,9 @@ export function createItemsDomain(deps) {
     const level = item.itemLevel || item.level || 1;
     const upgrade = Math.max(0, item.upgrade || 0);
     const transcend = Math.max(0, item.transcend || 0);
+    const stabilize = Math.max(0, item.stabilize || 0);
     const quality = item.qualityRoll || 1;
-    const enhanceFactor = 1 + upgrade * 0.085 + transcend * 0.035 + Math.max(0, quality - 1) * 0.16;
+    const enhanceFactor = 1 + upgrade * 0.085 + transcend * 0.035 + stabilize * 0.012 + Math.max(0, quality - 1) * 0.16;
     const out = {};
     Object.entries(item.stats || {}).forEach(([key, value]) => {
       if (CHANCE_STATS.has(key)) {
@@ -587,12 +621,14 @@ export function createItemsDomain(deps) {
     const affixCount = (item.affixes || []).length;
     const itemLevel = item.itemLevel || item.level || 1;
     const upgrade = item.upgrade || 0;
+    const stabilize = item.stabilize || 0;
     return {
-      iron: Math.max(1, Math.round((profile.iron || 1) + itemLevel * 0.07 + affixCount * (profile.affixWeight || 0.05) * 4 + upgrade * (profile.upgradeWeight || 0.05))),
+      iron: Math.max(1, Math.round((profile.iron || 1) + itemLevel * 0.07 + affixCount * (profile.affixWeight || 0.05) * 4 + upgrade * (profile.upgradeWeight || 0.05) + stabilize * 0.2)),
       wood: Math.max(0, Math.round((profile.wood || 0) + itemLevel * 0.035 + affixCount * (profile.affixWeight || 0.05) * 2.2)),
-      essence: Math.max(0, Math.round((profile.essence || 0) + affixCount * (profile.affixWeight || 0.05) * 1.8 + upgrade * 0.1)),
+      essence: Math.max(0, Math.round((profile.essence || 0) + affixCount * (profile.affixWeight || 0.05) * 1.8 + upgrade * 0.1 + stabilize * 0.12)),
       sigils: Math.max(0, Math.round((profile.sigils || 0) + Math.max(0, itemLevel - 18) * 0.02 + upgrade * 0.08)),
       echoShards: Math.max(0, Math.round((profile.echoShards || 0) + Math.max(0, itemLevel - 28) * 0.012 + upgrade * 0.06)),
+      catalysts: Math.max(0, Math.round((profile.catalysts || 0) + Math.max(0, itemLevel - 30) * 0.01 + affixCount * 0.04 + upgrade * 0.05)),
     };
   }
 
@@ -619,8 +655,13 @@ export function createItemsDomain(deps) {
       upgrade: Math.max(0, Math.round(item.upgrade || 0)),
       reforge: Math.max(0, Math.round(item.reforge || 0)),
       transcend: Math.max(0, Math.round(item.transcend || 0)),
+      stabilize: Math.max(0, Math.round(item.stabilize || 0)),
       qualityRoll,
       powerBudget,
+      forgeBudget: Math.max(1, Math.round(item.forgeBudget || powerBudget)),
+      provenanceRisk: clamp(typeof item.provenanceRisk === 'number' ? item.provenanceRisk : 0, -0.16, 0.3),
+      affinityXp: Math.max(0, Number(item.affinityXp || 0)),
+      affinityLevel: Math.max(0, Math.round(item.affinityLevel || 0)),
       provenance: {
         source: item.provenance && item.provenance.source ? item.provenance.source : (fallback.source || 'legacy'),
         zoneId: item.provenance && item.provenance.zoneId !== undefined ? item.provenance.zoneId : null,
@@ -638,6 +679,7 @@ export function createItemsDomain(deps) {
         bound: !!(item.lockFlags && item.lockFlags.bound),
         crafted: !!(item.lockFlags && item.lockFlags.crafted),
         transcended: !!(item.lockFlags && item.lockFlags.transcended),
+        stabilized: !!(item.lockFlags && item.lockFlags.stabilized),
         starter: !!(item.lockFlags && item.lockFlags.starter),
       },
       createdAt: item.createdAt || now(),

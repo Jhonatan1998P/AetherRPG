@@ -7,12 +7,17 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   const {
     SLOT_ORDER,
     SLOT_NAMES,
+    ITEM_ARCHETYPES,
     RANKS,
     ZONES,
     JOBS,
     PETS,
     SKILLS,
     ACHIEVEMENTS,
+    FORGE_SCHOOLS,
+    FORGE_MASTERY_NODES,
+    FORGE_ACTION_PITY,
+    FORGE_ECONOMY_TARGETS,
     ENEMY_ARCHETYPES,
     ENEMY_FAMILIES_BY_ZONE,
     ENEMY_AFFIXES,
@@ -48,8 +53,10 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     makeItem,
     rollLoot,
     scaleItemStats,
+    computeItemScores,
     computeItemScore,
     estimateSalvage,
+    normalizeItem,
     xpNeeded,
     defaultQuests,
     generateMarket,
@@ -58,6 +65,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     getPetData,
     getDerivedStats,
     getLootLuck,
+    getSetResonanceBonus,
     ensureUnlockedSkills,
     saveGame,
   } = window.AetherModel;
@@ -81,6 +89,12 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   });
 
   const economyDomain = createEconomyDomain({
+    FORGE_SCHOOLS,
+    FORGE_MASTERY_NODES,
+    FORGE_ACTION_PITY,
+    FORGE_ECONOMY_TARGETS,
+    ITEM_ARCHETYPES,
+    SLOT_ORDER,
     rarityDef,
     rarityOrder,
     nextRarityKey,
@@ -93,6 +107,8 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     rollLoot,
     estimateSalvage,
     computeItemScore,
+    computeItemScores,
+    normalizeItem,
   });
 
   const activitiesDomain = createActivitiesDomain({
@@ -161,6 +177,73 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     if (!telemetry.milestonesShown || typeof telemetry.milestonesShown !== 'object') {
       telemetry.milestonesShown = { epic: false, mythic: false };
     }
+    telemetry.milestonesShown.firstTranscend = !!telemetry.milestonesShown.firstTranscend;
+
+    if (!telemetry.forge || typeof telemetry.forge !== 'object') {
+      telemetry.forge = {
+        samples: {
+          craft: 0,
+          enhance: 0,
+          reforge: 0,
+          transcend: 0,
+          stabilize: 0,
+          convert: 0,
+        },
+        usefulOutcomes: {
+          enhance: 0,
+          reforge: 0,
+          transcend: 0,
+          stabilize: 0,
+        },
+        favorableOutcomes: 0,
+        neutralOutcomes: 0,
+        unfavorableOutcomes: 0,
+        actionPityState: {
+          enhance: 0,
+          reforge: 0,
+          transcend: 0,
+          stabilize: 0,
+        },
+        costPerUsefulOutcome: {
+          gold: 0,
+          materials: 0,
+          samples: 0,
+        },
+        firstMeaningfulUpgradeAt: null,
+        firstSpecializationDecisionAt: null,
+        schoolSwaps: 0,
+        loops: {
+          craftToSellRoi: [],
+          buyToSalvageRoi: [],
+        },
+        threatToAffinity: [],
+        governance: {
+          shortCycleRetunes: 0,
+          mediumCycleRetunes: 0,
+          longCycleRetunes: 0,
+          lastRetuneAt: null,
+        },
+      };
+    }
+    const forgeTelemetry = telemetry.forge;
+    forgeTelemetry.samples = forgeTelemetry.samples && typeof forgeTelemetry.samples === 'object'
+      ? forgeTelemetry.samples
+      : { craft: 0, enhance: 0, reforge: 0, transcend: 0, stabilize: 0, convert: 0 };
+    forgeTelemetry.usefulOutcomes = forgeTelemetry.usefulOutcomes && typeof forgeTelemetry.usefulOutcomes === 'object'
+      ? forgeTelemetry.usefulOutcomes
+      : { enhance: 0, reforge: 0, transcend: 0, stabilize: 0 };
+    if (!forgeTelemetry.actionPityState || typeof forgeTelemetry.actionPityState !== 'object') {
+      forgeTelemetry.actionPityState = { enhance: 0, reforge: 0, transcend: 0, stabilize: 0 };
+    }
+    if (!forgeTelemetry.costPerUsefulOutcome || typeof forgeTelemetry.costPerUsefulOutcome !== 'object') {
+      forgeTelemetry.costPerUsefulOutcome = { gold: 0, materials: 0, samples: 0 };
+    }
+    if (!forgeTelemetry.loops || typeof forgeTelemetry.loops !== 'object') {
+      forgeTelemetry.loops = { craftToSellRoi: [], buyToSalvageRoi: [] };
+    }
+    if (!Array.isArray(forgeTelemetry.loops.craftToSellRoi)) forgeTelemetry.loops.craftToSellRoi = [];
+    if (!Array.isArray(forgeTelemetry.loops.buyToSalvageRoi)) forgeTelemetry.loops.buyToSalvageRoi = [];
+    if (!Array.isArray(forgeTelemetry.threatToAffinity)) forgeTelemetry.threatToAffinity = [];
     if (!telemetry.combat || typeof telemetry.combat !== 'object') {
       telemetry.combat = {};
     }
@@ -207,7 +290,8 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       + (player.wood || 0)
       + (player.essence || 0)
       + (player.sigils || 0)
-      + (player.echoShards || 0);
+      + (player.echoShards || 0)
+      + (player.catalysts || 0);
   }
 
   function recordEconomyDelta(goldDelta = 0, materialDelta = 0, ts = Date.now()) {
@@ -261,7 +345,8 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       + Number(rewards.xp || 0) * 0.6
       + Number(rewards.essence || 0) * 20
       + Number(rewards.sigils || 0) * 42
-      + Number(rewards.echoShards || 0) * 120;
+      + Number(rewards.echoShards || 0) * 120
+      + Number(rewards.catalysts || 0) * 65;
 
     combat.samples.total += 1;
     if (victory) combat.samples.victories += 1;
@@ -382,7 +467,8 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       + Number(reward.wood || 0)
       + Number(reward.essence || 0)
       + Number(reward.sigils || 0)
-      + Number(reward.echoShards || 0);
+      + Number(reward.echoShards || 0)
+      + Number(reward.catalysts || 0);
     Object.entries(reward).forEach(([key, value]) => {
       if (key === 'xp') {
         gainXp(value);
@@ -411,7 +497,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     return entries.map(([k, v]) => {
       const label = {
         xp: 'XP', gold: 'oro', shards: 'fragmentos', iron: 'hierro', wood: 'madera',
-        essence: 'esencia', sigils: 'sigilos', echoShards: 'eco fragmentos', food: 'comida', potions: 'pociones', keys: 'llaves', relicDust: 'polvo reliquia'
+        essence: 'esencia', sigils: 'sigilos', echoShards: 'eco fragmentos', catalysts: 'catalizadores', food: 'comida', potions: 'pociones', keys: 'llaves', relicDust: 'polvo reliquia'
       }[k] || k;
       return `+${fmt(v)} ${label}`;
     }).join(' · ');
@@ -753,7 +839,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     state.stats.crits += statsDelta.crits;
     state.player.hp = clamp(player.hp, 1, getDerivedStats().maxHp);
 
-    const rewards = { gold: 0, xp: 0, iron: 0, wood: 0, essence: 0, sigils: 0, echoShards: 0, keys: 0, potions: 0 };
+    const rewards = { gold: 0, xp: 0, iron: 0, wood: 0, essence: 0, sigils: 0, echoShards: 0, catalysts: 0, keys: 0, potions: 0 };
     let rewardProfile = combatDomain.computeEnemyRewardProfile({
       mode,
       kind: foe.kind,
@@ -855,6 +941,14 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       victory,
       playerHpRatio,
       threatScore: foe.threatScore,
+    });
+
+    economyDomain.awardCombatAffinity(state, {
+      threatScore: foe.threatScore,
+      turnsPlayed: summary.turnsPlayed,
+      victory,
+    }, {
+      addJournal,
     });
 
     state.player.title = currentRank().title;
@@ -1030,7 +1124,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   function previewSalvage(itemId) {
     const item = economyDomain.getInventoryItem(state, itemId);
     if (!item) return null;
-    return economyDomain.salvageYieldFor(item);
+    return economyDomain.salvageYieldFor(item, state);
   }
 
   function usePotion() {
@@ -1160,8 +1254,22 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     return economyDomain.previewCraftItem(state, slot, tier);
   }
 
+  function forgeSnapshot() {
+    return economyDomain.getForgeState(state);
+  }
+
+  function maybeShowForgeMilestones() {
+    const telemetry = ensureTelemetryShape();
+    const forge = forgeSnapshot();
+    if (forge.firstTranscendAt && !telemetry.milestonesShown.firstTranscend) {
+      telemetry.milestonesShown.firstTranscend = true;
+      addJournal('🌌', '¡Hito de forja! Has completado tu primera trascendencia exitosa.');
+      toast('Primera trascendencia completada', 'violet');
+    }
+  }
+
   function craftItem(slot, tier = 'basic') {
-    return withResourceTelemetry(() => economyDomain.craftItem(state, { slot, tier }, {
+    const result = withResourceTelemetry(() => economyDomain.craftItem(state, { slot, tier }, {
       maxInventory: maxInventory(),
       toast,
       addJournal,
@@ -1170,25 +1278,31 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       getLootLuck,
       onItemAcquired,
     }));
+    maybeShowForgeMilestones();
+    return result;
   }
 
   function enhanceItem(slot) {
-    return withResourceTelemetry(() => economyDomain.enhanceItem(state, slot, {
+    const result = withResourceTelemetry(() => economyDomain.enhanceItem(state, slot, {
       toast,
       trackQuest,
       addJournal,
     }));
+    maybeShowForgeMilestones();
+    return result;
   }
 
   function previewEnhanceItem(slot) {
     return economyDomain.previewEnhanceItem(state, slot);
   }
 
-  function reforgeItem(itemId) {
-    return withResourceTelemetry(() => economyDomain.reforgeItem(state, itemId, {
+  function reforgeItem(payload) {
+    const result = withResourceTelemetry(() => economyDomain.reforgeItem(state, payload, {
       toast,
       addJournal,
     }));
+    maybeShowForgeMilestones();
+    return result;
   }
 
   function previewReforgeItem(itemId) {
@@ -1196,14 +1310,60 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function transcendItem(itemId) {
-    return withResourceTelemetry(() => economyDomain.transcendItem(state, itemId, {
+    const result = withResourceTelemetry(() => economyDomain.transcendItem(state, itemId, {
+      toast,
+      addJournal,
+    }));
+    maybeShowForgeMilestones();
+    return result;
+  }
+
+  function previewTranscendItem(itemId) {
+    return economyDomain.previewTranscendItem(state, itemId);
+  }
+
+  function previewStabilizeItem(itemId) {
+    return economyDomain.previewStabilizeItem(state, itemId);
+  }
+
+  function stabilizeItem(itemId) {
+    const result = withResourceTelemetry(() => economyDomain.stabilizeItem(state, itemId, {
+      toast,
+      addJournal,
+    }));
+    maybeShowForgeMilestones();
+    return result;
+  }
+
+  function convertMaterials(recipeId) {
+    return withResourceTelemetry(() => economyDomain.convertMaterials(state, recipeId, {
+      toast,
+      addJournal,
+      trackQuest,
+    }));
+  }
+
+  function setForgeSchool(schoolId) {
+    return withResourceTelemetry(() => economyDomain.setForgeSchool(state, schoolId, {
       toast,
       addJournal,
     }));
   }
 
-  function previewTranscendItem(itemId) {
-    return economyDomain.previewTranscendItem(state, itemId);
+  function unlockForgeMastery(nodeId) {
+    return withResourceTelemetry(() => economyDomain.unlockForgeMastery(state, nodeId, {
+      toast,
+      addJournal,
+    }));
+  }
+
+  function getForgeState() {
+    const forge = forgeSnapshot();
+    const resonance = getSetResonanceBonus();
+    return {
+      ...forge,
+      resonance,
+    };
   }
 
   function forgeItem(slot, tier = 'normal') {
@@ -1525,6 +1685,17 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     };
   }
 
+  function getForgePityStatus() {
+    const forge = economyDomain.getForgeState(state);
+    const pity = forge.actionPity || {};
+    return {
+      enhance: softRound(pity.enhance || 0, 1),
+      reforge: softRound(pity.reforge || 0, 1),
+      transcend: softRound(pity.transcend || 0, 1),
+      stabilize: softRound(pity.stabilize || 0, 1),
+    };
+  }
+
   window.AetherSystems = {
     addJournal,
     toast,
@@ -1579,6 +1750,12 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     reforgeItem,
     previewTranscendItem,
     transcendItem,
+    previewStabilizeItem,
+    stabilizeItem,
+    convertMaterials,
+    setForgeSchool,
+    unlockForgeMastery,
+    getForgeState,
     forgeItem,
     upgradeEquipped,
     rerollItem,
@@ -1604,5 +1781,6 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     autoManage,
     autoHeal,
     getPityStatus,
+    getForgePityStatus,
   };
 })();

@@ -1,6 +1,8 @@
 export function createStatsDomain(deps) {
   const {
     SLOT_ORDER,
+    ITEM_ARCHETYPES,
+    FORGE_SET_RESONANCE,
     emptyStats,
     addStats,
     softRound,
@@ -84,6 +86,56 @@ export function createStatsDomain(deps) {
     };
   }
 
+  function masteryResonanceScale(state) {
+    const nodes = state.player && state.player.forge && state.player.forge.masteryNodes
+      ? state.player.forge.masteryNodes
+      : {};
+    const resonanceRanks = Number(nodes.potency_resonator || 0)
+      + Number(nodes.potency_aegis || 0)
+      + Number(nodes.potency_flux || 0);
+    const gain = 1 - Math.exp(-Math.max(0, resonanceRanks) * 0.45);
+    return 1 + gain * 0.12;
+  }
+
+  function getSetResonanceBonus(state) {
+    const bonus = emptyStats();
+    const byRole = {
+      offensive: 0,
+      defensive: 0,
+      hybrid: 0,
+    };
+
+    SLOT_ORDER.forEach((slot) => {
+      const item = state.player && state.player.equipment ? state.player.equipment[slot] : null;
+      if (!item) return;
+      const archetype = ITEM_ARCHETYPES && ITEM_ARCHETYPES[slot] ? ITEM_ARCHETYPES[slot] : null;
+      const role = archetype && archetype.role ? archetype.role : 'hybrid';
+      if (!byRole[role]) byRole[role] = 0;
+      byRole[role] += 1;
+    });
+
+    const scale = masteryResonanceScale(state);
+    Object.entries(FORGE_SET_RESONANCE || {}).forEach(([role, config]) => {
+      const count = byRole[role] || 0;
+      if (!config) return;
+      if (count >= Number(config.threshold || 99)) {
+        addStats(bonus, Object.fromEntries(
+          Object.entries(config.bonus || {}).map(([key, value]) => [key, value * scale])
+        ));
+      }
+      if (count >= Number(config.fullSetThreshold || 99)) {
+        addStats(bonus, Object.fromEntries(
+          Object.entries(config.fullSetBonus || {}).map(([key, value]) => [key, value * scale])
+        ));
+      }
+    });
+
+    return {
+      counts: byRole,
+      bonus,
+    };
+  }
+
   function getDerivedStats(state, ctx) {
     if (!state.player) {
       return {
@@ -112,9 +164,11 @@ export function createStatsDomain(deps) {
       p.guild.barracks, p.guild.treasury, p.guild.sanctuary, p.guild.hunters, p.guild.arsenal,
       p.relics.wrath, p.relics.fortune, p.relics.vitality, p.relics.momentum,
       p.pet || '', p.petLevel || 0,
+      (p.forge && p.forge.school) || '',
+      JSON.stringify((p.forge && p.forge.masteryNodes) || {}),
       ...SLOT_ORDER.map((slot) => {
         const item = p.equipment[slot];
-        return item ? `${item.id}:${item.level}:${item.upgrade || 0}:${item.rarity}:${item.reforge || 0}` : '-';
+        return item ? `${item.id}:${item.level}:${item.upgrade || 0}:${item.rarity}:${item.reforge || 0}:${item.stabilize || 0}` : '-';
       }),
     ].join('|');
 
@@ -139,16 +193,17 @@ export function createStatsDomain(deps) {
     const guild = getGuildBonus(state);
     const relic = getRelicBonus(state);
     const pet = petBonus(state, getPetData);
+    const resonance = getSetResonanceBonus(state);
 
     let attack = base.attack + (gear.attack || 0) + (training.attack || 0);
     let defense = base.defense + (gear.defense || 0) + (training.defense || 0);
     let speed = base.speed + (gear.speed || 0) + (training.speed || 0);
     let maxHp = base.hp + (gear.hp || 0) + (training.hp || 0);
 
-    const attackPct = (guild.attackPct || 0) + (relic.attackPct || 0) + (pet.attackPct || 0);
-    const defensePct = (guild.defensePct || 0) + (pet.defensePct || 0);
-    const hpPct = (guild.hpPct || 0) + (relic.hpPct || 0) + (pet.hpPct || 0);
-    const speedPct = (relic.speedPct || 0) + (pet.speedPct || 0);
+    const attackPct = (guild.attackPct || 0) + (relic.attackPct || 0) + (pet.attackPct || 0) + (resonance.bonus.attackPct || 0);
+    const defensePct = (guild.defensePct || 0) + (pet.defensePct || 0) + (resonance.bonus.defensePct || 0);
+    const hpPct = (guild.hpPct || 0) + (relic.hpPct || 0) + (pet.hpPct || 0) + (resonance.bonus.hpPct || 0);
+    const speedPct = (relic.speedPct || 0) + (pet.speedPct || 0) + (resonance.bonus.speedPct || 0);
 
     attack *= (1 + attackPct);
     defense *= (1 + defensePct);
@@ -161,9 +216,9 @@ export function createStatsDomain(deps) {
     speed = diminishingValue(speed, 26 + combatScale * 4.2, 0.0046);
     maxHp = diminishingValue(maxHp, 520 + combatScale * 120, 0.00052);
 
-    const rawCrit = base.crit + (gear.crit || 0) + (training.crit || 0) + (pet.crit || 0);
-    const rawDodge = base.dodge + (gear.dodge || 0) + (training.dodge || 0) + (pet.dodge || 0);
-    const rawBlock = base.block + (gear.block || 0) + (training.block || 0) + (pet.block || 0);
+    const rawCrit = base.crit + (gear.crit || 0) + (training.crit || 0) + (pet.crit || 0) + (resonance.bonus.crit || 0);
+    const rawDodge = base.dodge + (gear.dodge || 0) + (training.dodge || 0) + (pet.dodge || 0) + (resonance.bonus.dodge || 0);
+    const rawBlock = base.block + (gear.block || 0) + (training.block || 0) + (pet.block || 0) + (resonance.bonus.block || 0);
     const rawLifesteal = base.lifesteal + (gear.lifesteal || 0) + (training.lifesteal || 0);
 
     derivedCache.sig = sig;
@@ -181,6 +236,7 @@ export function createStatsDomain(deps) {
       goldPct: (guild.goldPct || 0) + (pet.goldPct || 0) + (relic.goldPct || 0),
       lootLuck: (guild.lootLuck || 0) + (pet.lootLuck || 0) + (relic.lootLuck || 0),
       regenPct: (guild.regenPct || 0) + (pet.regenPct || 0) + (relic.regenPct || 0),
+      setResonance: resonance,
     };
     return derivedCache.value;
   }
@@ -197,6 +253,7 @@ export function createStatsDomain(deps) {
     getRelicBonus,
     getEquipmentBonus,
     getTrainingBonus,
+    getSetResonanceBonus,
     getDerivedStats,
     getLootLuck,
   };

@@ -32,8 +32,8 @@ export const RARITIES = [
     valueBase: 20,
     value: 20,
     dropWeightBySource: { arena: 52, dungeon: 37, expedition: 44, market: 39, forge: 24 },
-    salvageProfile: { iron: 1, wood: 1, essence: 0, sigils: 0, echoShards: 0, affixWeight: 0.06, upgradeWeight: 0.05 },
-    upgradeCaps: { enhance: 5, reforge: 2, transcend: false },
+    salvageProfile: { iron: 1, wood: 1, essence: 0, sigils: 0, echoShards: 0, catalysts: 0, affixWeight: 0.06, upgradeWeight: 0.05 },
+    upgradeCaps: { enhance: 5, reforge: 2, transcend: false, stabilize: 1 },
     milestone: false,
   },
   {
@@ -45,8 +45,8 @@ export const RARITIES = [
     valueBase: 48,
     value: 48,
     dropWeightBySource: { arena: 28, dungeon: 26, expedition: 29, market: 30, forge: 32 },
-    salvageProfile: { iron: 2, wood: 1, essence: 0, sigils: 0, echoShards: 0, affixWeight: 0.08, upgradeWeight: 0.07 },
-    upgradeCaps: { enhance: 7, reforge: 3, transcend: true },
+    salvageProfile: { iron: 2, wood: 1, essence: 0, sigils: 0, echoShards: 0, catalysts: 0, affixWeight: 0.08, upgradeWeight: 0.07 },
+    upgradeCaps: { enhance: 7, reforge: 3, transcend: true, stabilize: 2 },
     milestone: false,
   },
   {
@@ -58,8 +58,8 @@ export const RARITIES = [
     valueBase: 124,
     value: 124,
     dropWeightBySource: { arena: 12, dungeon: 18, expedition: 15, market: 18, forge: 27 },
-    salvageProfile: { iron: 3, wood: 2, essence: 1, sigils: 0, echoShards: 0, affixWeight: 0.11, upgradeWeight: 0.09 },
-    upgradeCaps: { enhance: 9, reforge: 4, transcend: true },
+    salvageProfile: { iron: 3, wood: 2, essence: 1, sigils: 0, echoShards: 0, catalysts: 0, affixWeight: 0.11, upgradeWeight: 0.09 },
+    upgradeCaps: { enhance: 9, reforge: 4, transcend: true, stabilize: 3 },
     milestone: false,
   },
   {
@@ -71,8 +71,8 @@ export const RARITIES = [
     valueBase: 332,
     value: 332,
     dropWeightBySource: { arena: 5, dungeon: 10, expedition: 7, market: 9, forge: 12 },
-    salvageProfile: { iron: 5, wood: 3, essence: 2, sigils: 1, echoShards: 0, affixWeight: 0.13, upgradeWeight: 0.1 },
-    upgradeCaps: { enhance: 11, reforge: 5, transcend: true },
+    salvageProfile: { iron: 5, wood: 3, essence: 2, sigils: 1, echoShards: 0, catalysts: 1, affixWeight: 0.13, upgradeWeight: 0.1 },
+    upgradeCaps: { enhance: 11, reforge: 5, transcend: true, stabilize: 4 },
     milestone: true,
   },
   {
@@ -84,8 +84,8 @@ export const RARITIES = [
     valueBase: 890,
     value: 890,
     dropWeightBySource: { arena: 2.4, dungeon: 5.1, expedition: 3.1, market: 3.5, forge: 4.4 },
-    salvageProfile: { iron: 7, wood: 4, essence: 4, sigils: 2, echoShards: 1, affixWeight: 0.15, upgradeWeight: 0.11 },
-    upgradeCaps: { enhance: 12, reforge: 6, transcend: true },
+    salvageProfile: { iron: 7, wood: 4, essence: 4, sigils: 2, echoShards: 1, catalysts: 1, affixWeight: 0.15, upgradeWeight: 0.11 },
+    upgradeCaps: { enhance: 12, reforge: 6, transcend: true, stabilize: 5 },
     milestone: false,
   },
   {
@@ -97,8 +97,8 @@ export const RARITIES = [
     valueBase: 2320,
     value: 2320,
     dropWeightBySource: { arena: 0.55, dungeon: 2.1, expedition: 1.05, market: 0.9, forge: 1.2 },
-    salvageProfile: { iron: 9, wood: 5, essence: 6, sigils: 4, echoShards: 2, affixWeight: 0.17, upgradeWeight: 0.12 },
-    upgradeCaps: { enhance: 14, reforge: 7, transcend: true },
+    salvageProfile: { iron: 9, wood: 5, essence: 6, sigils: 4, echoShards: 2, catalysts: 2, affixWeight: 0.17, upgradeWeight: 0.12 },
+    upgradeCaps: { enhance: 14, reforge: 7, transcend: true, stabilize: 6 },
     milestone: true,
   },
   {
@@ -110,13 +110,167 @@ export const RARITIES = [
     valueBase: 5480,
     value: 5480,
     dropWeightBySource: { arena: 0.08, dungeon: 0.35, expedition: 0.18, market: 0.06, forge: 0.15 },
-    salvageProfile: { iron: 12, wood: 6, essence: 9, sigils: 7, echoShards: 4, affixWeight: 0.2, upgradeWeight: 0.14 },
-    upgradeCaps: { enhance: 16, reforge: 8, transcend: false },
+    salvageProfile: { iron: 12, wood: 6, essence: 9, sigils: 7, echoShards: 4, catalysts: 3, affixWeight: 0.2, upgradeWeight: 0.14 },
+    upgradeCaps: { enhance: 16, reforge: 8, transcend: false, stabilize: 7 },
     milestone: false,
   },
 ];
 
 export const LOOT_SOURCES = ['arena', 'dungeon', 'expedition', 'market', 'forge'];
+
+export const FORGE_PROGRESS_STAGES = [
+  {
+    id: 'early',
+    label: 'Early',
+    minLevel: 1,
+    maxLevel: 12,
+    actions: ['craftItem', 'enhanceItem'],
+  },
+  {
+    id: 'mid',
+    label: 'Mid',
+    minLevel: 13,
+    maxLevel: 25,
+    actions: ['craftItem', 'enhanceItem', 'reforgeItem', 'stabilizeItem'],
+  },
+  {
+    id: 'late',
+    label: 'Late',
+    minLevel: 26,
+    maxLevel: 90,
+    actions: ['craftItem', 'enhanceItem', 'reforgeItem', 'stabilizeItem', 'transcendItem'],
+  },
+];
+
+export const FORGE_SCHOOLS = {
+  arsenal: {
+    id: 'arsenal',
+    name: 'Arsenal',
+    focus: 'offensive',
+    description: 'Favorece potencia ofensiva y presión de daño.',
+    costMult: { craft: 1, enhance: 1.06, reforge: 0.98, transcend: 1.04, stabilize: 1.04 },
+    chanceBonus: { enhance: 0.02, reforge: 0.01, transcend: 0 },
+    forgePowerBonus: 0.02,
+  },
+  bastion: {
+    id: 'bastion',
+    name: 'Bastion',
+    focus: 'defensive',
+    description: 'Favorece estabilidad, mitigación y consistencia.',
+    costMult: { craft: 1.02, enhance: 0.98, reforge: 1, transcend: 1.04, stabilize: 0.92 },
+    chanceBonus: { enhance: 0.01, reforge: 0.03, transcend: 0.01 },
+    forgePowerBonus: 0.01,
+  },
+  arcanum: {
+    id: 'arcanum',
+    name: 'Arcanum',
+    focus: 'hybrid',
+    description: 'Favorece control de outcomes y eficiencia de recursos.',
+    costMult: { craft: 0.98, enhance: 1, reforge: 1.04, transcend: 0.98, stabilize: 0.96 },
+    chanceBonus: { enhance: 0.01, reforge: 0.02, transcend: 0.02 },
+    forgePowerBonus: 0.015,
+  },
+};
+
+export const FORGE_MASTERY_NODES = [
+  {
+    id: 'efficiency_foundry',
+    school: 'shared',
+    branch: 'efficiency',
+    name: 'Fundicion Eficiente',
+    maxRank: 5,
+    pointCost: [1, 1, 2, 2, 3],
+    effects: { costReduction: 0.14 },
+  },
+  {
+    id: 'efficiency_recycler',
+    school: 'shared',
+    branch: 'efficiency',
+    name: 'Reciclaje Avanzado',
+    maxRank: 4,
+    pointCost: [1, 1, 2, 3],
+    effects: { salvageBoost: 0.18 },
+  },
+  {
+    id: 'control_temper',
+    school: 'shared',
+    branch: 'control',
+    name: 'Templado de Precision',
+    maxRank: 5,
+    pointCost: [1, 1, 2, 2, 3],
+    effects: { enhanceChance: 0.14, reforgeChance: 0.1 },
+  },
+  {
+    id: 'control_transcendence',
+    school: 'shared',
+    branch: 'control',
+    name: 'Rito de Trascendencia',
+    maxRank: 4,
+    pointCost: [2, 2, 3, 4],
+    effects: { transcendChance: 0.12, transcendFailureGuard: 0.2 },
+  },
+  {
+    id: 'potency_resonator',
+    school: 'arsenal',
+    branch: 'potency',
+    name: 'Resonador de Arsenal',
+    maxRank: 4,
+    pointCost: [2, 2, 3, 4],
+    effects: { forgePowerBonus: 0.1, resonanceBonus: 0.06 },
+  },
+  {
+    id: 'potency_aegis',
+    school: 'bastion',
+    branch: 'potency',
+    name: 'Aegis de Bastion',
+    maxRank: 4,
+    pointCost: [2, 2, 3, 4],
+    effects: { stabilizePower: 0.18, resonanceBonus: 0.06 },
+  },
+  {
+    id: 'potency_flux',
+    school: 'arcanum',
+    branch: 'potency',
+    name: 'Flujo de Arcanum',
+    maxRank: 4,
+    pointCost: [2, 2, 3, 4],
+    effects: { qualityBias: 0.08, resonanceBonus: 0.06 },
+  },
+];
+
+export const FORGE_ACTION_PITY = {
+  enhance: { target: 4, maxBonus: 0.24 },
+  reforge: { target: 4, maxBonus: 0.2 },
+  transcend: { target: 5, maxBonus: 0.3 },
+  stabilize: { target: 3, maxBonus: 0.15 },
+};
+
+export const FORGE_ECONOMY_TARGETS = {
+  early: { minLevel: 1, maxLevel: 12, goldPerHour: [900, 1700], materialsPerHour: [18, 44] },
+  mid: { minLevel: 13, maxLevel: 25, goldPerHour: [1700, 3200], materialsPerHour: [40, 92] },
+  late: { minLevel: 26, maxLevel: 90, goldPerHour: [3000, 6200], materialsPerHour: [76, 170] },
+};
+
+export const FORGE_SET_RESONANCE = {
+  offensive: {
+    threshold: 3,
+    bonus: { attackPct: 0.04, crit: 0.01 },
+    fullSetThreshold: 5,
+    fullSetBonus: { attackPct: 0.02, speedPct: 0.02 },
+  },
+  defensive: {
+    threshold: 3,
+    bonus: { defensePct: 0.04, block: 0.01 },
+    fullSetThreshold: 5,
+    fullSetBonus: { hpPct: 0.03, defensePct: 0.02 },
+  },
+  hybrid: {
+    threshold: 3,
+    bonus: { hpPct: 0.03, speedPct: 0.02 },
+    fullSetThreshold: 5,
+    fullSetBonus: { dodge: 0.01, attackPct: 0.015 },
+  },
+};
 
 export const ITEM_ARCHETYPES = {
   weapon: {

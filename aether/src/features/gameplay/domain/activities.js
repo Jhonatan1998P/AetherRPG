@@ -116,6 +116,7 @@ export function createActivitiesDomain(deps) {
       iron: rand(1, 3 + zone.id),
       wood: rand(1, 2 + Math.floor(zone.id / 2)),
       essence: Math.random() < 0.45 ? rand(1, 2 + Math.floor(zone.id / 2)) : 0,
+      catalysts: exp.durationSec >= 120 && Math.random() < (0.08 + zone.id * 0.015) ? 1 : 0,
       food: Math.random() < 0.5 ? 1 + Math.floor(zone.id / 2) : 0,
     };
     grantRewards(reward, `Expedición — ${zone.name}`);

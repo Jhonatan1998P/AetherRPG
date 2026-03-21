@@ -34,7 +34,10 @@ const {
   previewEnhanceItem,
   previewReforgeItem,
   previewTranscendItem,
+  previewStabilizeItem,
   getPityStatus,
+  getForgePityStatus,
+  getForgeState,
   icon,
   replaceEmojiIcons,
   rarityName,
@@ -170,7 +173,7 @@ function qualityLabel(item) {
 
 function summarizeSalvage(yieldData) {
   if (!yieldData) return 'Sin datos';
-  const ordered = ['iron', 'wood', 'essence', 'sigils', 'echoShards'];
+  const ordered = ['iron', 'wood', 'essence', 'sigils', 'catalysts', 'echoShards'];
   const chunks = ordered
     .map((key) => ({ key, value: yieldData[key] || 0 }))
     .filter((entry) => entry.value > 0)
@@ -248,12 +251,13 @@ function inventoryCards() {
         const salvage = previewSalvage(item.id);
         const reforgePreview = previewReforgeItem(item.id);
         const transcendPreview = previewTranscendItem(item.id);
+        const stabilizePreview = previewStabilizeItem(item.id);
         return `
           <div class="glass rounded-2xl p-4 item-card cv-auto inventory-card-pro" ${tooltipAttr(`Objeto de rareza ${rarityName(item.rarity)}. Puntuación ${fmt(item.score)}. ${compare.detail}`)}>
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2"><div class="font-black rarity-${item.rarity} leading-snug break-words">${item.name}</div>${rarityBadge(item.rarity)}</div>
-                <div class="text-xs text-slate-300/60 mt-1">${SLOT_NAMES[item.slot]} · Nivel ${item.level || item.itemLevel} · Mejora +${item.upgrade || 0}/${headroom.cap}</div>
+                <div class="text-xs text-slate-300/60 mt-1">${SLOT_NAMES[item.slot]} · Nivel ${item.level || item.itemLevel} · Mejora +${item.upgrade || 0}/${headroom.cap} · Afinidad ${item.affinityLevel || 0}</div>
               </div>
               <div class="text-right shrink-0">
                 <div class="text-xs rounded-full px-2 py-1 bg-white/[.06]" ${tooltipAttr('Puntuación total estimada del objeto según sus estadísticas y mejora actual.')}>Punt. ${fmt(item.score)}</div>
@@ -261,11 +265,12 @@ function inventoryCards() {
               </div>
             </div>
             <p class="text-xs text-slate-300/62 mt-3">${compare.detail}</p>
-            <div class="grid sm:grid-cols-2 gap-2 mt-3 text-xs text-slate-300/72">
-              <div class="rounded-xl bg-white/[.04] p-2.5">Calidad: <b>${qualityLabel(item)}</b></div>
-              <div class="rounded-xl bg-white/[.04] p-2.5">Potencial: <b>+${headroom.remaining}</b> niveles</div>
-              <div class="rounded-xl bg-white/[.04] p-2.5 sm:col-span-2">Reciclaje: <b>${summarizeSalvage(salvage)}</b></div>
-            </div>
+              <div class="grid sm:grid-cols-2 gap-2 mt-3 text-xs text-slate-300/72">
+                <div class="rounded-xl bg-white/[.04] p-2.5">Calidad: <b>${qualityLabel(item)}</b></div>
+                <div class="rounded-xl bg-white/[.04] p-2.5">Potencial: <b>+${headroom.remaining}</b> niveles</div>
+                <div class="rounded-xl bg-white/[.04] p-2.5">Estabilizado: <b>${item.stabilize || 0}</b></div>
+                <div class="rounded-xl bg-white/[.04] p-2.5 sm:col-span-2">Reciclaje: <b>${summarizeSalvage(salvage)}</b></div>
+              </div>
             <div class="grid grid-cols-2 gap-2 mt-3 text-sm">
               ${itemStatGrid(item, 4)}
             </div>
@@ -279,6 +284,7 @@ function inventoryCards() {
                 <button type="button" class="btn btn-violet !py-2 text-xs" onclick="game.reforgeItem('${item.id}')" ${reforgePreview ? tooltipAttr(`Coste reforge: ${Object.entries(reforgePreview.cost).filter(([, value]) => value > 0).map(([key, value]) => `${value} ${key}`).join(', ')}`) : 'disabled'}>Retemplar</button>
                 <button type="button" class="btn btn-gold !py-2 text-xs" onclick="game.transcendItem('${item.id}')" ${transcendPreview ? tooltipAttr(`Trascender ${transcendPreview.from} -> ${transcendPreview.to}. Probabilidad ${Math.round(transcendPreview.successChance * 100)}%`) : 'disabled'}>Trascender</button>
               </div>
+              <button type="button" class="btn !py-2 text-xs mt-2" onclick="game.stabilizeItem('${item.id}')" ${stabilizePreview ? tooltipAttr(`Stabilize ${Math.round(stabilizePreview.successChance * 100)}%. Coste ${Object.entries(stabilizePreview.cost).filter(([, value]) => value > 0).map(([key, value]) => `${value} ${key}`).join(', ')}`) : 'disabled'}>Stabilize</button>
             </div>
           </div>
         `;
@@ -358,7 +364,10 @@ const secondaryViews = createSecondaryViews({
   previewEnhanceItem,
   previewReforgeItem,
   previewTranscendItem,
+  previewStabilizeItem,
   getPityStatus,
+  getForgePityStatus,
+  getForgeState,
   pager,
   expeditionTimerText,
   jobTimerText,

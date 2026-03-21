@@ -39,6 +39,10 @@ export function createSelectorsModule(deps) {
     return statsDomain.getTrainingBonus(state);
   }
 
+  function getSetResonanceBonus() {
+    return statsDomain.getSetResonanceBonus(state);
+  }
+
   function getDerivedStats() {
     return statsDomain.getDerivedStats(state, {
       getPetData,
@@ -62,6 +66,7 @@ export function createSelectorsModule(deps) {
     getRelicBonus,
     getEquipmentBonus,
     getTrainingBonus,
+    getSetResonanceBonus,
     getDerivedStats,
     getLootLuck,
   };

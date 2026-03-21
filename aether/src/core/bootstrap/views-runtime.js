@@ -41,7 +41,10 @@ const {
   previewEnhanceItem,
   previewReforgeItem,
   previewTranscendItem,
+  previewStabilizeItem,
   getPityStatus,
+  getForgePityStatus,
+  getForgeState,
 } = window.AetherSystems;
 
 function activeMeta() {
@@ -168,7 +171,10 @@ export const viewRuntime = {
   previewEnhanceItem,
   previewReforgeItem,
   previewTranscendItem,
+  previewStabilizeItem,
   getPityStatus,
+  getForgePityStatus,
+  getForgeState,
   icon,
   withIcon,
   replaceEmojiIcons,

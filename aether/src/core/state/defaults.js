@@ -41,13 +41,14 @@ export function createDefaultsModule(deps) {
   function makeDefaultState() {
     const startedAt = Date.now();
     return {
-      version: 6,
+      version: 7,
       currentView: 'resumen',
       currentTab: 'resumen',
       featureFlags: {
         itemPipelineV2: true,
         itemTelemetryV2: true,
         enemyPipelineV1: true,
+        forgeDepthV1: true,
       },
       ui: {
         inventoryFilter: 'all',
@@ -57,6 +58,7 @@ export function createDefaultsModule(deps) {
         journalPageSize: 16,
         modal: null,
         forgePreview: null,
+        forgeReforgeMode: 'total',
         moreMenuOpen: false,
         collapsedCardsByView: {},
       },
@@ -72,6 +74,7 @@ export function createDefaultsModule(deps) {
         essence: 5,
         sigils: 0,
         echoShards: 0,
+        catalysts: 1,
         food: 6,
         potions: 3,
         keys: 2,
@@ -112,6 +115,28 @@ export function createDefaultsModule(deps) {
           ascendant: 0,
           total: 0,
         },
+        forge: {
+          school: 'arsenal',
+          masteryPoints: 0,
+          masteryNodes: {},
+          actionPity: {
+            enhance: 0,
+            reforge: 0,
+            transcend: 0,
+            stabilize: 0,
+          },
+          actionCounters: {
+            craft: 0,
+            enhance: 0,
+            reforge: 0,
+            transcend: 0,
+            stabilize: 0,
+            convert: 0,
+          },
+          itemRerollChains: {},
+          firstTranscendAt: null,
+          firstStabilizeAt: null,
+        },
         equipment: {
           weapon: makeStarterItem('weapon', 'Gladius'),
           offhand: makeStarterItem('offhand', 'Escudo de Torre'),
@@ -149,6 +174,8 @@ export function createDefaultsModule(deps) {
           enhance: 0,
           reforge: 0,
           transcend: 0,
+          stabilize: 0,
+          convert: 0,
         },
         telemetry: {
           startedAt,
@@ -168,6 +195,51 @@ export function createDefaultsModule(deps) {
           milestonesShown: {
             epic: false,
             mythic: false,
+            firstTranscend: false,
+          },
+          forge: {
+            samples: {
+              craft: 0,
+              enhance: 0,
+              reforge: 0,
+              transcend: 0,
+              stabilize: 0,
+              convert: 0,
+            },
+            usefulOutcomes: {
+              enhance: 0,
+              reforge: 0,
+              transcend: 0,
+              stabilize: 0,
+            },
+            favorableOutcomes: 0,
+            neutralOutcomes: 0,
+            unfavorableOutcomes: 0,
+            actionPityState: {
+              enhance: 0,
+              reforge: 0,
+              transcend: 0,
+              stabilize: 0,
+            },
+            costPerUsefulOutcome: {
+              gold: 0,
+              materials: 0,
+              samples: 0,
+            },
+            firstMeaningfulUpgradeAt: null,
+            firstSpecializationDecisionAt: null,
+            schoolSwaps: 0,
+            loops: {
+              craftToSellRoi: [],
+              buyToSalvageRoi: [],
+            },
+            threatToAffinity: [],
+            governance: {
+              shortCycleRetunes: 0,
+              mediumCycleRetunes: 0,
+              longCycleRetunes: 0,
+              lastRetuneAt: null,
+            },
           },
           combat: {
             samples: {
@@ -199,6 +271,7 @@ export function createDefaultsModule(deps) {
         items: generateMarket(1),
         lastRefresh: Date.now(),
         refreshChainCount: 0,
+        cooldownUntil: 0,
         totalRefreshes: 0,
       },
       journal: [
