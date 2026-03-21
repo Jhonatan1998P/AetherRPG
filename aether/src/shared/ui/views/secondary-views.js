@@ -23,6 +23,11 @@ export function createSecondaryViews(deps) {
     compareAgainstEquipped,
     itemStatGrid,
     durationChoiceCard,
+    previewCraftItem,
+    previewEnhanceItem,
+    previewReforgeItem,
+    previewTranscendItem,
+    getPityStatus,
     pager,
     expeditionTimerText,
     jobTimerText,
@@ -225,6 +230,7 @@ export function createSecondaryViews(deps) {
                 <button type="button" class="btn btn-success" onclick="game.buyResource('potion')" ${tooltipAttr('Compra una poción para curarte más tarde por 120 de oro.')}>🧪 Poción · 120 oro</button>
                 <button type="button" class="btn btn-violet" onclick="game.buyResource('key')" ${tooltipAttr('Compra una llave para acceder a mazmorras por 180 de oro.')}>🗝️ Llave · 180 oro</button>
                 <button type="button" class="btn btn-primary" onclick="game.buyResource('essence')" ${tooltipAttr('Compra esencia para forja y progresión premium por 140 de oro.')}>✨ Esencia · 140 oro</button>
+                <button type="button" class="btn" onclick="game.buyResource('sigil')" ${tooltipAttr('Compra un sigilo para rutas de trascendencia por 260 de oro.')}>🔷 Sigilo · 260 oro</button>
                 <button type="button" class="btn" onclick="game.buyResource('food')" ${tooltipAttr('Compra comida para apoyar trabajos y mascotas por 65 de oro.')}>🍖 Comida x2 · 65 oro</button>
               </div>
             </div>
@@ -235,52 +241,80 @@ export function createSecondaryViews(deps) {
   }
 
   function renderForja() {
+    const forgePity = getPityStatus('forge');
+    const marketPity = getPityStatus('market');
+
+    const formatCost = (cost = {}) => Object.entries(cost)
+      .filter(([, value]) => value > 0)
+      .map(([key, value]) => `${fmt(value)} ${key}`)
+      .join(' · ');
+
+    const formatOutcomes = (outcomes = []) => outcomes
+      .map((entry) => `${Math.round((entry.chance || 0) * 100)}% ${rarityName(entry.rarity)}`)
+      .join(' · ');
+
     return `
       <div class="space-y-5">
-        ${pageLead('forja', `Hierro: <b>${fmt(state.player.iron)}</b> · Esencia: <b>${fmt(state.player.essence)}</b>`, [
-          actionButton('⚒️ Forjar arma', 'btn-primary', "game.forgeItem('weapon', 'normal')", 'Forja un arma estándar con coste moderado y rareza controlada.'),
-          actionButton('✨ Premium arma', 'btn-violet', "game.forgeItem('weapon', 'premium')", 'Forja un arma premium con mayor acceso a rarezas altas.'),
+        ${pageLead('forja', `Hierro: <b>${fmt(state.player.iron)}</b> · Esencia: <b>${fmt(state.player.essence)}</b> · Sigilos: <b>${fmt(state.player.sigils || 0)}</b>`, [
+          actionButton('⚒️ Forjar arma', 'btn-primary', "game.craftItem('weapon', 'basic')", 'Forja determinista con calidad variable.'),
+          actionButton('✨ Avanzada arma', 'btn-violet', "game.craftItem('weapon', 'advanced')", 'Mayor coste, mejor piso de rareza y más afijos.'),
           actionButton('🎒 Revisar inventario', '', "game.setView('inventario')")
         ].join(''))}
 
         ${actionBar([
-          actionButton('⚒️ Normal', 'btn-primary !py-3', "game.forgeItem('weapon', 'normal')"),
-          actionButton('✨ Premium', 'btn-violet !py-3', "game.forgeItem('weapon', 'premium')")
+          actionButton('⚒️ Básica', 'btn-primary !py-3', "game.craftItem('weapon', 'basic')"),
+          actionButton('✨ Avanzada', 'btn-violet !py-3', "game.craftItem('weapon', 'advanced')")
         ])}
 
         <div class="grid xl:grid-cols-[1fr,340px] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Contexto', 'Creación por espacio', 'Forja normal para volumen. Premium para apostar por rarezas altas.')}
+            ${sectionHeader('Contexto', 'Creación por espacio', 'Cada receta muestra coste y outcomes esperados antes de gastar materiales.')}
             <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
               ${SLOT_ORDER.map((slot) => `
+                ${(() => {
+                  const basic = previewCraftItem(slot, 'basic');
+                  const advanced = previewCraftItem(slot, 'advanced');
+                  return `
                 <div class="glass rounded-2xl p-4 forge-recipe-card">
                   <div class="font-bold">${SLOT_NAMES[slot]}</div>
-                  <div class="text-sm text-slate-300/70 mt-1">Pieza aleatoria del hueco.</div>
-                  <div class="grid grid-cols-2 gap-2 mt-3 text-sm">
-                    <div class="rounded-xl bg-white/[.04] p-2" ${tooltipAttr('Forja normal: más común, barata y orientada a volumen.')}>Normal <b>hierro</b></div>
-                    <div class="rounded-xl bg-white/[.04] p-2" ${tooltipAttr('Forja premium: más costosa y con mejor acceso a rarezas altas.')}>Premium <b>esencia</b></div>
+                  <div class="text-sm text-slate-300/70 mt-1">Pieza aleatoria del hueco con presupuesto por nivel y rareza.</div>
+                  <div class="grid gap-2 mt-3 text-xs text-slate-300/74">
+                    <div class="rounded-xl bg-white/[.04] p-2.5" ${tooltipAttr('Coste y tabla de outcomes de la receta básica.')}>Básica: <b>${formatCost(basic.cost)}</b><br><span class="text-slate-300/62">${formatOutcomes(basic.outcomes)}</span></div>
+                    <div class="rounded-xl bg-white/[.04] p-2.5" ${tooltipAttr('Coste y tabla de outcomes de la receta avanzada.')}>Avanzada: <b>${formatCost(advanced.cost)}</b><br><span class="text-slate-300/62">${formatOutcomes(advanced.outcomes)}</span></div>
                   </div>
                   <div class="grid grid-cols-2 gap-2 mt-3">
-                    <button type="button" class="btn btn-primary !py-2" onclick="game.forgeItem('${slot}', 'normal')">Forjar</button>
-                    <button type="button" class="btn btn-violet !py-2" onclick="game.forgeItem('${slot}', 'premium')">Premium</button>
+                    <button type="button" class="btn btn-primary !py-2" onclick="game.craftItem('${slot}', 'basic')">Básica</button>
+                    <button type="button" class="btn btn-violet !py-2" onclick="game.craftItem('${slot}', 'advanced')">Avanzada</button>
                   </div>
                 </div>
+                  `;
+                })()}
               `).join('')}
             </div>
           </section>
 
           <aside class="stack-compact">
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Decisión', 'Mejorar equipado', 'Invierte solo en piezas que ya decidiste conservar.')}
+              ${sectionHeader('Decisión', 'Mejorar equipado', 'Enhance para subir poder, reforge para redistribuir, transcend para evolucionar rareza.')}
               <div class="space-y-3 mt-4">
                 ${['weapon', 'chest', 'ring', 'amulet'].map((slot) => {
                   const item = state.player.equipment[slot];
+                  const enhance = item ? previewEnhanceItem(slot) : null;
+                  const reforge = item ? previewReforgeItem(item.id) : null;
+                  const transcend = item ? previewTranscendItem(item.id) : null;
                   return `
                     <div class="glass rounded-2xl p-4 forge-upgrade-card">
                       <div class="text-xs text-slate-300/55 uppercase tracking-[.18em]">${SLOT_NAMES[slot]}</div>
                        <div class="font-black break-words ${item ? `rarity-${item.rarity}` : 'text-slate-400/80'}">${item ? item.name : 'Vacío'}</div>
                       <div class="text-sm text-slate-300/70 mt-1">${item ? `Nivel ${item.level} · Mejora +${item.upgrade || 0}` : 'Equipa algo para mejorarlo.'}</div>
-                      <button type="button" class="btn btn-gold mt-3 w-full" ${item ? `onclick="game.upgradeEquipped('${slot}')"` : 'disabled'} ${tooltipAttr('Sube el nivel de mejora de la pieza equipada y aumenta sus estadísticas.')}>⚒️ Mejorar</button>
+                      ${item && enhance ? `<div class="text-xs text-slate-300/62 mt-2">Enhance: ${Math.round(enhance.successChance * 100)}% · coste ${formatCost(enhance.cost)}</div>` : ''}
+                      ${item && reforge ? `<div class="text-xs text-slate-300/62 mt-1">Reforge: ${Math.round(reforge.successChance * 100)}% · coste ${formatCost(reforge.cost)}</div>` : ''}
+                      ${item && transcend ? `<div class="text-xs text-slate-300/62 mt-1">Transcend: ${Math.round(transcend.successChance * 100)}% · ${transcend.from} → ${transcend.to}</div>` : ''}
+                      <div class="grid grid-cols-3 gap-2 mt-3">
+                        <button type="button" class="btn btn-gold !py-2" ${item ? `onclick="game.enhanceItem('${slot}')"` : 'disabled'} ${tooltipAttr('Mejora incremental estable de la pieza equipada.')}>Enhance</button>
+                        <button type="button" class="btn btn-violet !py-2" ${item ? `onclick="game.reforgeItem('${item.id}')"` : 'disabled'} ${tooltipAttr('Redistribuye stats de forma controlada sin destruir el objeto.')}>Reforge</button>
+                        <button type="button" class="btn !py-2" ${item && transcend ? `onclick="game.transcendItem('${item.id}')"` : 'disabled'} ${tooltipAttr('Evoluciona la rareza si cumples requisitos y coste de transcend.')}>Transcend</button>
+                      </div>
                     </div>
                   `;
                 }).join('')}
@@ -288,10 +322,11 @@ export function createSecondaryViews(deps) {
             </div>
 
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Soporte', 'Regla de gasto')}
+              ${sectionHeader('Soporte', 'Pity y regla de gasto')}
               <div class="grid gap-3">
-                ${infoCard('Hierro', 'Úsalo para generar volumen y buscar base útil.', 'surface-subtle')}
-                ${infoCard('Esencia', 'Resérvala para intentos premium y mejoras clave.', 'surface-subtle')}
+                ${infoCard('Pity forja', `Epic en ${forgePity.epic} intentos sin hito · Mythic en ${forgePity.mythic}.`, 'surface-subtle')}
+                ${infoCard('Pity mercado', `Epic en ${marketPity.epic} rotaciones sin hito · Mythic en ${marketPity.mythic}.`, 'surface-subtle')}
+                ${infoCard('Estrategia', 'Hierro para volumen, esencia para upgrades, sigilos/echo para evolución tardía.', 'surface-subtle')}
               </div>
             </div>
           </aside>
@@ -392,7 +427,7 @@ export function createSecondaryViews(deps) {
                   <div class="text-sm text-slate-300/75 mt-1">${skill.desc}</div>
                   <div class="text-xs text-slate-300/60 mt-2">Recarga ${skill.cooldown} · Desbloqueo Nv ${skill.unlockLevel}</div>
                   <div class="grid grid-cols-2 gap-2 mt-3">
-                    <button type="button" class="btn !py-2" onclick="game.toggleSkill('${skill.id}')">${state.player.activeSkills.includes(skill.id) ? 'Quitar' : 'Equipar'}</button>
+                    <button type="button" class="btn !py-2" onclick="game.toggleActiveSkill('${skill.id}')">${state.player.activeSkills.includes(skill.id) ? 'Quitar' : 'Equipar'}</button>
                     <button type="button" class="btn btn-violet !py-2" ${state.player.unlockedSkills.includes(skill.id) ? `onclick="game.upgradeSkill('${skill.id}')"` : 'disabled'}>Mejorar</button>
                   </div>
                 </div>

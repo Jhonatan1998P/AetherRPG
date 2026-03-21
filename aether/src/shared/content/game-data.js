@@ -23,13 +23,205 @@ export const RANKS = [
 ];
 
 export const RARITIES = [
-  { key: 'common', name: 'Comun', mult: 1, affixes: 0, value: 14, order: 0 },
-  { key: 'uncommon', name: 'Infrecuente', mult: 1.14, affixes: 1, value: 34, order: 1 },
-  { key: 'rare', name: 'Raro', mult: 1.38, affixes: 2, value: 92, order: 2 },
-  { key: 'epic', name: 'Epico', mult: 1.74, affixes: 3, value: 240, order: 3 },
-  { key: 'legendary', name: 'Legendario', mult: 2.18, affixes: 4, value: 640, order: 4 },
-  { key: 'mythic', name: 'Mitico', mult: 2.82, affixes: 5, value: 1650, order: 5 },
+  {
+    key: 'common',
+    name: 'Comun',
+    order: 0,
+    mult: 1,
+    affixes: 0,
+    valueBase: 20,
+    value: 20,
+    dropWeightBySource: { arena: 52, dungeon: 37, expedition: 44, market: 39, forge: 24 },
+    salvageProfile: { iron: 1, wood: 1, essence: 0, sigils: 0, echoShards: 0, affixWeight: 0.06, upgradeWeight: 0.05 },
+    upgradeCaps: { enhance: 5, reforge: 2, transcend: false },
+    milestone: false,
+  },
+  {
+    key: 'uncommon',
+    name: 'Infrecuente',
+    order: 1,
+    mult: 1.16,
+    affixes: 1,
+    valueBase: 48,
+    value: 48,
+    dropWeightBySource: { arena: 28, dungeon: 26, expedition: 29, market: 30, forge: 32 },
+    salvageProfile: { iron: 2, wood: 1, essence: 0, sigils: 0, echoShards: 0, affixWeight: 0.08, upgradeWeight: 0.07 },
+    upgradeCaps: { enhance: 7, reforge: 3, transcend: true },
+    milestone: false,
+  },
+  {
+    key: 'rare',
+    name: 'Raro',
+    order: 2,
+    mult: 1.44,
+    affixes: 2,
+    valueBase: 124,
+    value: 124,
+    dropWeightBySource: { arena: 12, dungeon: 18, expedition: 15, market: 18, forge: 27 },
+    salvageProfile: { iron: 3, wood: 2, essence: 1, sigils: 0, echoShards: 0, affixWeight: 0.11, upgradeWeight: 0.09 },
+    upgradeCaps: { enhance: 9, reforge: 4, transcend: true },
+    milestone: false,
+  },
+  {
+    key: 'epic',
+    name: 'Epico',
+    order: 3,
+    mult: 1.82,
+    affixes: 3,
+    valueBase: 332,
+    value: 332,
+    dropWeightBySource: { arena: 5, dungeon: 10, expedition: 7, market: 9, forge: 12 },
+    salvageProfile: { iron: 5, wood: 3, essence: 2, sigils: 1, echoShards: 0, affixWeight: 0.13, upgradeWeight: 0.1 },
+    upgradeCaps: { enhance: 11, reforge: 5, transcend: true },
+    milestone: true,
+  },
+  {
+    key: 'legendary',
+    name: 'Legendario',
+    order: 4,
+    mult: 2.3,
+    affixes: 4,
+    valueBase: 890,
+    value: 890,
+    dropWeightBySource: { arena: 2.4, dungeon: 5.1, expedition: 3.1, market: 3.5, forge: 4.4 },
+    salvageProfile: { iron: 7, wood: 4, essence: 4, sigils: 2, echoShards: 1, affixWeight: 0.15, upgradeWeight: 0.11 },
+    upgradeCaps: { enhance: 12, reforge: 6, transcend: true },
+    milestone: false,
+  },
+  {
+    key: 'mythic',
+    name: 'Mitico',
+    order: 5,
+    mult: 2.98,
+    affixes: 5,
+    valueBase: 2320,
+    value: 2320,
+    dropWeightBySource: { arena: 0.55, dungeon: 2.1, expedition: 1.05, market: 0.9, forge: 1.2 },
+    salvageProfile: { iron: 9, wood: 5, essence: 6, sigils: 4, echoShards: 2, affixWeight: 0.17, upgradeWeight: 0.12 },
+    upgradeCaps: { enhance: 14, reforge: 7, transcend: true },
+    milestone: true,
+  },
+  {
+    key: 'ascendant',
+    name: 'Ascendente',
+    order: 6,
+    mult: 3.62,
+    affixes: 6,
+    valueBase: 5480,
+    value: 5480,
+    dropWeightBySource: { arena: 0.08, dungeon: 0.35, expedition: 0.18, market: 0.06, forge: 0.15 },
+    salvageProfile: { iron: 12, wood: 6, essence: 9, sigils: 7, echoShards: 4, affixWeight: 0.2, upgradeWeight: 0.14 },
+    upgradeCaps: { enhance: 16, reforge: 8, transcend: false },
+    milestone: false,
+  },
 ];
+
+export const LOOT_SOURCES = ['arena', 'dungeon', 'expedition', 'market', 'forge'];
+
+export const ITEM_ARCHETYPES = {
+  weapon: {
+    slot: 'weapon',
+    role: 'offensive',
+    primaryStats: ['attack', 'crit', 'speed'],
+    secondaryStats: ['lifesteal', 'hp'],
+    statWeights: { attack: 1.35, crit: 0.78, speed: 0.7, lifesteal: 0.48, hp: 0.36, defense: 0.25 },
+    qualityBias: 1.12,
+  },
+  offhand: {
+    slot: 'offhand',
+    role: 'hybrid',
+    primaryStats: ['defense', 'hp', 'block'],
+    secondaryStats: ['attack', 'crit'],
+    statWeights: { defense: 1.22, hp: 0.92, block: 0.68, attack: 0.62, crit: 0.3, speed: 0.38 },
+    qualityBias: 1,
+  },
+  helm: {
+    slot: 'helm',
+    role: 'defensive',
+    primaryStats: ['defense', 'hp'],
+    secondaryStats: ['crit', 'speed'],
+    statWeights: { defense: 1.08, hp: 0.88, crit: 0.34, speed: 0.3, block: 0.46 },
+    qualityBias: 0.98,
+  },
+  chest: {
+    slot: 'chest',
+    role: 'defensive',
+    primaryStats: ['hp', 'defense'],
+    secondaryStats: ['attack', 'block'],
+    statWeights: { hp: 1.26, defense: 1.14, attack: 0.42, block: 0.55, lifesteal: 0.21 },
+    qualityBias: 1.03,
+  },
+  gloves: {
+    slot: 'gloves',
+    role: 'offensive',
+    primaryStats: ['attack', 'crit', 'lifesteal'],
+    secondaryStats: ['speed', 'hp'],
+    statWeights: { attack: 1.04, crit: 0.74, lifesteal: 0.56, speed: 0.58, hp: 0.32, defense: 0.26 },
+    qualityBias: 1.05,
+  },
+  boots: {
+    slot: 'boots',
+    role: 'hybrid',
+    primaryStats: ['speed', 'dodge'],
+    secondaryStats: ['defense', 'hp'],
+    statWeights: { speed: 1.1, dodge: 0.76, defense: 0.46, hp: 0.42, crit: 0.33, attack: 0.36 },
+    qualityBias: 1,
+  },
+  ring: {
+    slot: 'ring',
+    role: 'offensive',
+    primaryStats: ['crit', 'attack'],
+    secondaryStats: ['speed', 'dodge'],
+    statWeights: { crit: 0.95, attack: 0.78, speed: 0.56, dodge: 0.5, hp: 0.35, defense: 0.28 },
+    qualityBias: 1.08,
+  },
+  amulet: {
+    slot: 'amulet',
+    role: 'hybrid',
+    primaryStats: ['hp', 'attack', 'defense'],
+    secondaryStats: ['block', 'lifesteal'],
+    statWeights: { hp: 1.02, attack: 0.82, defense: 0.7, block: 0.56, lifesteal: 0.44, crit: 0.34 },
+    qualityBias: 1.04,
+  },
+};
+
+const SLOT_BUDGET_FACTOR = {
+  weapon: 1.24,
+  offhand: 1.08,
+  helm: 0.98,
+  chest: 1.16,
+  gloves: 0.94,
+  boots: 0.96,
+  ring: 0.92,
+  amulet: 1,
+};
+
+const RARITY_BUDGET_FACTOR = {
+  common: 0.92,
+  uncommon: 1.04,
+  rare: 1.22,
+  epic: 1.46,
+  legendary: 1.76,
+  mythic: 2.15,
+  ascendant: 2.62,
+};
+
+export const STAT_BUDGETS = Object.fromEntries(
+  SLOT_ORDER.map((slot) => {
+    const slotMap = {};
+    const slotFactor = SLOT_BUDGET_FACTOR[slot] || 1;
+    for (let level = 1; level <= 90; level += 1) {
+      const levelBase = (12 + Math.pow(level, 1.2) * 4.8) * slotFactor;
+      slotMap[level] = Object.fromEntries(
+        Object.entries(RARITY_BUDGET_FACTOR).map(([rarityKey, rarityFactor]) => [
+          rarityKey,
+          Math.round(levelBase * rarityFactor),
+        ])
+      );
+    }
+    return [slot, slotMap];
+  })
+);
 
 export const ITEM_BASES = {
   weapon: [
@@ -286,6 +478,8 @@ export const ACHIEVEMENTS = [
   { id: 'floor5', title: 'Delvador', desc: 'Alcanza el piso 5 de las mazmorras.', type: 'highestDungeonFloor', target: 5, reward: { gold: 450, keys: 2 } },
   { id: 'level10', title: 'Veterano', desc: 'Llega al nivel 10.', type: 'level', target: 10, reward: { gold: 500, potions: 2, essence: 4 } },
   { id: 'legendary1', title: 'Resplandor Dorado', desc: 'Consigue 1 objeto legendario.', type: 'legendaryFound', target: 1, reward: { shards: 4, gold: 500 } },
+  { id: 'mythic1', title: 'Sello de la Noche', desc: 'Consigue 1 objeto mitico.', type: 'mythicFound', target: 1, reward: { sigils: 2, shards: 6, gold: 800 } },
+  { id: 'ascendant1', title: 'Llama Ascendente', desc: 'Consigue 1 objeto ascendente.', type: 'ascendantFound', target: 1, reward: { echoShards: 2, sigils: 4, gold: 1400 } },
   { id: 'guild8', title: 'Constructor', desc: 'Invierte 8 niveles de gremio en total.', type: 'guildTotal', target: 8, reward: { gold: 700, essence: 5 } },
   { id: 'ascend1', title: 'Mas alla del polvo', desc: 'Asciende una vez.', type: 'ascension', target: 1, reward: { relicDust: 3, shards: 5 } },
 ];

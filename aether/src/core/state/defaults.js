@@ -39,10 +39,15 @@ export function createDefaultsModule(deps) {
   }
 
   function makeDefaultState() {
+    const startedAt = Date.now();
     return {
-      version: 4,
+      version: 5,
       currentView: 'resumen',
       currentTab: 'resumen',
+      featureFlags: {
+        itemPipelineV2: true,
+        itemTelemetryV2: true,
+      },
       ui: {
         inventoryFilter: 'all',
         inventoryPage: 1,
@@ -64,6 +69,8 @@ export function createDefaultsModule(deps) {
         iron: 16,
         wood: 12,
         essence: 5,
+        sigils: 0,
+        echoShards: 0,
         food: 6,
         potions: 3,
         keys: 2,
@@ -97,6 +104,13 @@ export function createDefaultsModule(deps) {
         highestDungeonFloor: 1,
         ascension: 0,
         relicDust: 0,
+        itemPity: {
+          bySource: {},
+          epic: 0,
+          mythic: 0,
+          ascendant: 0,
+          total: 0,
+        },
         equipment: {
           weapon: makeStarterItem('weapon', 'Gladius'),
           offhand: makeStarterItem('offhand', 'Escudo de Torre'),
@@ -124,6 +138,37 @@ export function createDefaultsModule(deps) {
         dungeons: 0,
         elites: 0,
         legendaryFound: 0,
+        mythicFound: 0,
+        ascendantFound: 0,
+        goldSpent: 0,
+        materialsSpent: 0,
+        equippedUpgrades: 0,
+        craftUsage: {
+          craft: 0,
+          enhance: 0,
+          reforge: 0,
+          transcend: 0,
+        },
+        telemetry: {
+          startedAt,
+          firstEpicAt: null,
+          firstMythicAt: null,
+          firstAscendantAt: null,
+          rarityBySource: {
+            arena: {},
+            dungeon: {},
+            expedition: {},
+            market: {},
+            forge: {},
+            legacy: {},
+          },
+          netGoldByHour: {},
+          netMaterialsByHour: {},
+          milestonesShown: {
+            epic: false,
+            mythic: false,
+          },
+        },
       },
       quests: defaultQuests(1),
       claimedAchievements: [],
@@ -134,6 +179,8 @@ export function createDefaultsModule(deps) {
       market: {
         items: generateMarket(1),
         lastRefresh: Date.now(),
+        refreshChainCount: 0,
+        totalRefreshes: 0,
       },
       journal: [
         { id: uid(), ts: Date.now(), icon: '⚔️', text: 'Has entrado en Aether Arena. El coliseo huele a hierro, oro y gloria.' }

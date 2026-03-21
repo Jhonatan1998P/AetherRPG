@@ -9,6 +9,18 @@ export function createStatsDomain(deps) {
 
   const derivedCache = { sig: '', value: null };
 
+  function diminishingValue(value, pivot, strength) {
+    if (value <= pivot) return value;
+    const excess = value - pivot;
+    return pivot + (excess / (1 + excess * strength));
+  }
+
+  function softCapChance(value, cap, knee = cap * 0.66, strength = 6.5) {
+    const clamped = Math.max(0, value || 0);
+    const softened = diminishingValue(clamped, knee, strength);
+    return clamp(softened, 0, cap);
+  }
+
   function invalidateDerivedCache() {
     derivedCache.sig = '';
     derivedCache.value = null;
@@ -143,16 +155,27 @@ export function createStatsDomain(deps) {
     maxHp *= (1 + hpPct);
     speed *= (1 + speedPct);
 
+    const combatScale = Math.max(1, p.level + (p.ascension || 0) * 2);
+    attack = diminishingValue(attack, 55 + combatScale * 9.5, 0.0024);
+    defense = diminishingValue(defense, 44 + combatScale * 8.1, 0.0029);
+    speed = diminishingValue(speed, 26 + combatScale * 4.2, 0.0046);
+    maxHp = diminishingValue(maxHp, 520 + combatScale * 120, 0.00052);
+
+    const rawCrit = base.crit + (gear.crit || 0) + (training.crit || 0) + (pet.crit || 0);
+    const rawDodge = base.dodge + (gear.dodge || 0) + (training.dodge || 0) + (pet.dodge || 0);
+    const rawBlock = base.block + (gear.block || 0) + (training.block || 0) + (pet.block || 0);
+    const rawLifesteal = base.lifesteal + (gear.lifesteal || 0) + (training.lifesteal || 0);
+
     derivedCache.sig = sig;
     derivedCache.value = {
       attack: softRound(attack, 2),
       defense: softRound(defense, 2),
       speed: softRound(speed, 2),
       maxHp: Math.round(maxHp),
-      crit: clamp(base.crit + (gear.crit || 0) + (training.crit || 0) + (pet.crit || 0), 0, 0.7),
-      dodge: clamp(base.dodge + (gear.dodge || 0) + (training.dodge || 0) + (pet.dodge || 0), 0, 0.55),
-      block: clamp(base.block + (gear.block || 0) + (training.block || 0) + (pet.block || 0), 0, 0.5),
-      lifesteal: clamp(base.lifesteal + (gear.lifesteal || 0) + (training.lifesteal || 0), 0, 0.45),
+      crit: softRound(softCapChance(rawCrit, 0.62, 0.36, 8.2), 4),
+      dodge: softRound(softCapChance(rawDodge, 0.5, 0.31, 9.8), 4),
+      block: softRound(softCapChance(rawBlock, 0.46, 0.29, 10.2), 4),
+      lifesteal: softRound(softCapChance(rawLifesteal, 0.34, 0.18, 11.4), 4),
       maxEnergy: base.maxEnergy,
       maxStamina: base.maxStamina,
       goldPct: (guild.goldPct || 0) + (pet.goldPct || 0) + (relic.goldPct || 0),

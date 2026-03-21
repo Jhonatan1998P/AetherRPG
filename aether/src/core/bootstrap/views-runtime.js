@@ -33,6 +33,12 @@ const {
   isZoneUnlocked,
   summarizeReward,
   achievementProgress,
+  previewSalvage,
+  previewCraftItem,
+  previewEnhanceItem,
+  previewReforgeItem,
+  previewTranscendItem,
+  getPityStatus,
 } = window.AetherSystems;
 
 function activeMeta() {
@@ -151,6 +157,12 @@ export const viewRuntime = {
   isZoneUnlocked,
   summarizeReward,
   achievementProgress,
+  previewSalvage,
+  previewCraftItem,
+  previewEnhanceItem,
+  previewReforgeItem,
+  previewTranscendItem,
+  getPityStatus,
   icon,
   withIcon,
   replaceEmojiIcons,

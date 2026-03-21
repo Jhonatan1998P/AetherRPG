@@ -218,7 +218,7 @@ export function createMainViews(deps) {
       const equipped = state.player.equipment[item.slot];
       return !equipped || (item.score || 0) > (equipped.score || 0);
     }).length;
-    const legendary = state.player.inventory.filter((item) => item.rarity === 'legendary' || item.rarity === 'mythic').length;
+    const legendary = state.player.inventory.filter((item) => item.rarity === 'legendary' || item.rarity === 'mythic' || item.rarity === 'ascendant').length;
 
     return `
       <div class="space-y-5">
@@ -264,7 +264,7 @@ export function createMainViews(deps) {
                   </div>
                 </summary>
                 <div class="filters-row mt-3">
-                  ${['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'].map((itemFilter) => `
+                  ${['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'ascendant'].map((itemFilter) => `
                     <button type="button" class="btn filter-pill ${filter === itemFilter ? 'active tab-btn' : ''}" onclick="game.setInventoryFilter('${itemFilter}')" ${tooltipAttr(`Filtrar inventario por ${translateFilter(itemFilter).toLowerCase()}.`)}>${translateFilter(itemFilter)}</button>
                   `).join('')}
                 </div>

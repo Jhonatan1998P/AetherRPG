@@ -2,6 +2,8 @@
   const { RARITIES, ITEM_BASES } = window.AetherConfig;
   let uidCounter = 1;
   const $ = (id) => document.getElementById(id);
+  const RARITY_SORTED = [...RARITIES].sort((a, b) => a.order - b.order);
+  const RARITY_INDEX = Object.fromEntries(RARITY_SORTED.map((rarity, index) => [rarity.key, index]));
 
   const clone = (v) => JSON.parse(JSON.stringify(v));
 
@@ -37,6 +39,7 @@
     epic: { name: 'Épico', tone: 'text-violet-200 border-violet-300/24 bg-violet-400/10' },
     legendary: { name: 'Legendario', tone: 'text-amber-200 border-amber-300/24 bg-amber-400/10' },
     mythic: { name: 'Mítico', tone: 'text-fuchsia-200 border-fuchsia-300/24 bg-fuchsia-400/10' },
+    ascendant: { name: 'Ascendente', tone: 'text-orange-100 border-orange-300/26 bg-gradient-to-r from-orange-500/20 to-rose-400/20 shadow-[0_0_18px_rgba(251,146,60,.28)]' },
   };
 
   const FILTER_LABELS = {
@@ -55,6 +58,7 @@
     epic: 'Épico',
     legendary: 'Legendario',
     mythic: 'Mítico',
+    ascendant: 'Ascendente',
   };
 
   function fmt(num, digits = 0) {
@@ -81,7 +85,7 @@
     const patterns = [
       /<\/?b>/gi,
       /<br\s*\/?>/gi,
-      /<span class="rarity-(common|uncommon|rare|epic|legendary|mythic)">/gi,
+      /<span class="rarity-(common|uncommon|rare|epic|legendary|mythic|ascendant)">/gi,
       /<\/span>/gi,
     ];
     patterns.forEach((pattern) => {
@@ -153,7 +157,32 @@
   }
 
   function rarityDef(key) {
-    return RARITIES.find(r => r.key === key) || RARITIES[0];
+    return RARITY_SORTED.find((rarity) => rarity.key === key) || RARITY_SORTED[0];
+  }
+
+  function rarityOrder(key) {
+    return RARITY_INDEX[key] ?? 0;
+  }
+
+  function rarityKeyByOrder(order = 0) {
+    const index = clamp(Math.round(order), 0, RARITY_SORTED.length - 1);
+    return RARITY_SORTED[index].key;
+  }
+
+  function nextRarityKey(key, step = 1) {
+    return rarityKeyByOrder(rarityOrder(key) + step);
+  }
+
+  function weightedPick(entries, fallback = null) {
+    const clean = (entries || []).filter((entry) => entry && entry.weight > 0);
+    if (!clean.length) return fallback;
+    const total = clean.reduce((sumValue, entry) => sumValue + entry.weight, 0);
+    let roll = Math.random() * total;
+    for (let i = 0; i < clean.length; i += 1) {
+      roll -= clean[i].weight;
+      if (roll <= 0) return clean[i].value;
+    }
+    return clean[clean.length - 1].value;
   }
 
   function deepMerge(target, source) {
@@ -217,14 +246,41 @@
     return m ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
   }
 
-  function pickRarity(level = 1, bonusLuck = 0) {
-    const adjusted = Math.random() - Math.min(0.16, bonusLuck * 0.035) - Math.min(0.06, level * 0.0007);
-    if (adjusted < 0.0012) return rarityDef('mythic');
-    if (adjusted < 0.010) return rarityDef('legendary');
-    if (adjusted < 0.052) return rarityDef('epic');
-    if (adjusted < 0.19) return rarityDef('rare');
-    if (adjusted < 0.48) return rarityDef('uncommon');
-    return rarityDef('common');
+  function pickRarity(level = 1, bonusLuckOrOptions = 0) {
+    const options = typeof bonusLuckOrOptions === 'number'
+      ? { bonusLuck: bonusLuckOrOptions }
+      : (bonusLuckOrOptions || {});
+    const source = options.source || 'arena';
+    const bonusLuck = Math.max(0, options.bonusLuck || options.lootLuck || 0);
+    const pity = options.pity || {};
+
+    const weights = RARITY_SORTED.map((rarity) => {
+      const sourceWeight = rarity.dropWeightBySource && typeof rarity.dropWeightBySource[source] === 'number'
+        ? rarity.dropWeightBySource[source]
+        : rarity.dropWeightBySource && typeof rarity.dropWeightBySource.arena === 'number'
+          ? rarity.dropWeightBySource.arena
+          : 1;
+      const order = rarity.order || 0;
+      const levelFactor = 1 + Math.min(0.72, Math.max(0, level - 1) * 0.011 * Math.max(0, order - 1));
+      const luckFactor = 1 + (order <= 1 ? bonusLuck * 0.28 : bonusLuck * (0.72 + order * 0.28));
+      const pityEpic = rarity.key === 'epic' ? Math.min(3.4, (pity.epic || 0) * 0.065) : 0;
+      const pityMythic = rarity.key === 'mythic' ? Math.min(4.2, (pity.mythic || 0) * 0.052) : 0;
+      const pityAscendant = rarity.key === 'ascendant' ? Math.min(1.2, (pity.ascendant || 0) * 0.02) : 0;
+
+      let gateFactor = 1;
+      if (level < 10 && order >= 3) gateFactor *= 0.4;
+      if (level < 18 && order >= 4) gateFactor *= 0.35;
+      if (level < 26 && order >= 5) gateFactor *= 0.22;
+      if (level < 38 && order >= 6) gateFactor *= 0.08;
+      if ((options.ascension || 0) <= 0 && order >= 6) gateFactor *= 0.52;
+
+      return {
+        value: rarity,
+        weight: Math.max(0.0001, sourceWeight * levelFactor * (1 + pityEpic + pityMythic + pityAscendant) * gateFactor * Math.max(0.2, luckFactor)),
+      };
+    });
+
+    return weightedPick(weights, rarityDef('common')) || rarityDef('common');
   }
 
   function findBaseItem(slot, name) {
@@ -257,6 +313,10 @@
     htmlStat,
     progressBar,
     rarityDef,
+    rarityOrder,
+    rarityKeyByOrder,
+    nextRarityKey,
+    weightedPick,
     deepMerge,
     emptyStats,
     addStats,

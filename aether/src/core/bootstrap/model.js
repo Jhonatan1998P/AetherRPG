@@ -9,8 +9,34 @@ import { createMutationsModule } from '../state/mutations.js';
 import { createPersistenceModule } from '../state/persistence.js';
 
 (() => {
-  const { STORAGE_KEY, SLOT_ORDER, ITEM_BASES, AFFIXES, PETS, SKILLS } = window.AetherConfig;
-  const { clone, rand, pick, clamp, sum, uid, softRound, rarityDef, deepMerge, emptyStats, addStats, localDayKey, pickRarity, findBaseItem, scaledStatValue } = window.AetherUtils;
+  const {
+    STORAGE_KEY,
+    SLOT_ORDER,
+    ITEM_BASES,
+    ITEM_ARCHETYPES,
+    STAT_BUDGETS,
+    AFFIXES,
+    PETS,
+    SKILLS,
+  } = window.AetherConfig;
+  const {
+    clone,
+    rand,
+    pick,
+    clamp,
+    sum,
+    uid,
+    softRound,
+    rarityDef,
+    rarityOrder,
+    deepMerge,
+    emptyStats,
+    addStats,
+    localDayKey,
+    pickRarity,
+    findBaseItem,
+    scaledStatValue,
+  } = window.AetherUtils;
 
   const statsDomain = createStatsDomain({
     SLOT_ORDER,
@@ -24,20 +50,30 @@ import { createPersistenceModule } from '../state/persistence.js';
 
   const {
     scaleItemStats,
+    computeItemScores,
     computeItemScore,
+    estimateSalvage,
     makeItem,
     makeStarterItem,
+    rollLoot,
+    makeItemFromBudget,
+    applyAffixesWithBudget,
     generateMarket,
     starterInventory,
+    normalizeItem,
   } = createItemsDomain({
     ITEM_BASES,
+    ITEM_ARCHETYPES,
+    STAT_BUDGETS,
     AFFIXES,
     SLOT_ORDER,
     pick,
     rand,
     uid,
     softRound,
+    clamp,
     rarityDef,
+    rarityOrder,
     pickRarity,
     findBaseItem,
     scaledStatValue,
@@ -108,6 +144,49 @@ import { createPersistenceModule } from '../state/persistence.js';
     return unlocked;
   }
 
+  function normalizeItemList(items, source = 'legacy') {
+    return (Array.isArray(items) ? items : [])
+      .map((item) => normalizeItem(item, { source }))
+      .filter(Boolean);
+  }
+
+  function normalizeEquipmentMap(equipment, fallbackEquipment) {
+    const next = { ...(fallbackEquipment || {}) };
+    SLOT_ORDER.forEach((slot) => {
+      if (equipment && equipment[slot]) {
+        next[slot] = normalizeItem(equipment[slot], {
+          slot,
+          source: (equipment[slot].provenance && equipment[slot].provenance.source) || 'legacy',
+        });
+      } else {
+        next[slot] = null;
+      }
+    });
+    return next;
+  }
+
+  function migrateLegacyState(defaults) {
+    const currentVersion = Number(state.version || 0);
+
+    state.player.inventory = normalizeItemList(state.player.inventory, 'legacy');
+    state.player.equipment = normalizeEquipmentMap(state.player.equipment, defaults.player.equipment);
+    state.market.items = normalizeItemList(state.market.items, 'market');
+
+    state.player.inventory.sort((a, b) => {
+      const rarityGap = rarityOrder(b.rarity) - rarityOrder(a.rarity);
+      if (rarityGap !== 0) return rarityGap;
+      return (b.score || 0) - (a.score || 0);
+    });
+
+    if (!state.player.itemPity || typeof state.player.itemPity !== 'object') {
+      state.player.itemPity = clone(defaults.player.itemPity);
+    }
+
+    if (currentVersion < defaults.version) {
+      state.version = defaults.version;
+    }
+  }
+
   function normalizeState() {
     const defaults = makeDefaultState();
     replaceState(deepMerge(defaults, clone(state)));
@@ -131,6 +210,7 @@ import { createPersistenceModule } from '../state/persistence.js';
     if (!state.streak) state.streak = defaults.streak;
     if (!state.timers) state.timers = defaults.timers;
     if (!state.ui) state.ui = defaults.ui;
+    migrateLegacyState(defaults);
     state.ui.inventoryFilter = state.ui.inventoryFilter || 'all';
     state.ui.inventoryPage = Math.max(1, Number(state.ui.inventoryPage) || 1);
     state.ui.inventoryPageSize = Math.max(6, Number(state.ui.inventoryPageSize) || defaults.ui.inventoryPageSize);
@@ -213,7 +293,13 @@ import { createPersistenceModule } from '../state/persistence.js';
     makeItem,
     makeStarterItem,
     scaleItemStats,
+    computeItemScores,
     computeItemScore,
+    estimateSalvage,
+    rollLoot,
+    makeItemFromBudget,
+    applyAffixesWithBudget,
+    normalizeItem,
     xpNeeded,
     defaultQuests,
     generateMarket,

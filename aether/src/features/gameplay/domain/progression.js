@@ -103,6 +103,8 @@ export function createProgressionDomain(deps) {
       highestDungeonFloor: state.player.highestDungeonFloor,
       level: state.player.level,
       legendaryFound: state.stats.legendaryFound,
+      mythicFound: state.stats.mythicFound,
+      ascendantFound: state.stats.ascendantFound,
       guildTotal: guildTotal(),
       ascension: state.player.ascension,
     };

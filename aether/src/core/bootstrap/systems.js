@@ -5,8 +5,46 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
 
 (() => {
   const { SLOT_ORDER, SLOT_NAMES, RANKS, ZONES, JOBS, PETS, SKILLS, ACHIEVEMENTS } = window.AetherConfig;
-  const { $, clone, rand, randf, pick, clamp, sum, uid, fmt, pct, softRound, localDayKey, timeLeft, rarityDef, sanitizeInlineHtml } = window.AetherUtils;
-  const { state, replaceState, makeDefaultState, normalizeState, makeItem, scaleItemStats, computeItemScore, xpNeeded, defaultQuests, generateMarket, maxInventory, guildTotal, getPetData, getDerivedStats, getLootLuck, ensureUnlockedSkills, saveGame } = window.AetherModel;
+  const {
+    $,
+    clone,
+    rand,
+    randf,
+    pick,
+    clamp,
+    sum,
+    uid,
+    fmt,
+    pct,
+    softRound,
+    localDayKey,
+    timeLeft,
+    rarityDef,
+    rarityOrder,
+    nextRarityKey,
+    sanitizeInlineHtml,
+  } = window.AetherUtils;
+  const {
+    state,
+    replaceState,
+    makeDefaultState,
+    normalizeState,
+    makeItem,
+    rollLoot,
+    scaleItemStats,
+    computeItemScore,
+    estimateSalvage,
+    xpNeeded,
+    defaultQuests,
+    generateMarket,
+    maxInventory,
+    guildTotal,
+    getPetData,
+    getDerivedStats,
+    getLootLuck,
+    ensureUnlockedSkills,
+    saveGame,
+  } = window.AetherModel;
 
   const combatDomain = createCombatDomain({
     SKILLS,
@@ -21,11 +59,16 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
 
   const economyDomain = createEconomyDomain({
     rarityDef,
+    rarityOrder,
+    nextRarityKey,
+    clamp,
     rand,
     uid,
     clone,
     generateMarket,
     makeItem,
+    rollLoot,
+    estimateSalvage,
     computeItemScore,
   });
 
@@ -34,9 +77,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     ZONES,
     clone,
     rand,
-    pick,
-    SLOT_ORDER,
-    makeItem,
+    rollLoot,
     clamp,
   });
 
@@ -75,8 +116,86 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     }, 2800);
   }
 
+  function ensureTelemetryShape() {
+    if (!state.stats.telemetry || typeof state.stats.telemetry !== 'object') {
+      state.stats.telemetry = {};
+    }
+    const telemetry = state.stats.telemetry;
+    telemetry.startedAt = telemetry.startedAt || Date.now();
+    telemetry.firstEpicAt = telemetry.firstEpicAt || null;
+    telemetry.firstMythicAt = telemetry.firstMythicAt || null;
+    telemetry.firstAscendantAt = telemetry.firstAscendantAt || null;
+    if (!telemetry.rarityBySource || typeof telemetry.rarityBySource !== 'object') {
+      telemetry.rarityBySource = {};
+    }
+    if (!telemetry.netGoldByHour || typeof telemetry.netGoldByHour !== 'object') {
+      telemetry.netGoldByHour = {};
+    }
+    if (!telemetry.netMaterialsByHour || typeof telemetry.netMaterialsByHour !== 'object') {
+      telemetry.netMaterialsByHour = {};
+    }
+    if (!telemetry.milestonesShown || typeof telemetry.milestonesShown !== 'object') {
+      telemetry.milestonesShown = { epic: false, mythic: false };
+    }
+    return telemetry;
+  }
+
+  function telemetryHourKey(ts = Date.now()) {
+    const d = new Date(ts);
+    const yy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}T${hh}`;
+  }
+
+  function telemetryMaterialSum(player = state.player) {
+    return (player.iron || 0)
+      + (player.wood || 0)
+      + (player.essence || 0)
+      + (player.sigils || 0)
+      + (player.echoShards || 0);
+  }
+
+  function recordEconomyDelta(goldDelta = 0, materialDelta = 0, ts = Date.now()) {
+    const telemetry = ensureTelemetryShape();
+    const hour = telemetryHourKey(ts);
+    telemetry.netGoldByHour[hour] = (telemetry.netGoldByHour[hour] || 0) + goldDelta;
+    telemetry.netMaterialsByHour[hour] = (telemetry.netMaterialsByHour[hour] || 0) + materialDelta;
+  }
+
+  function recordItemTelemetry(item) {
+    if (!item) return;
+    const telemetry = ensureTelemetryShape();
+    const source = (item.provenance && item.provenance.source) || 'legacy';
+    if (!telemetry.rarityBySource[source]) telemetry.rarityBySource[source] = {};
+    telemetry.rarityBySource[source][item.rarity] = (telemetry.rarityBySource[source][item.rarity] || 0) + 1;
+
+    const elapsed = Date.now() - (telemetry.startedAt || Date.now());
+    if (item.rarity === 'epic' && !telemetry.firstEpicAt) telemetry.firstEpicAt = elapsed;
+    if (item.rarity === 'mythic' && !telemetry.firstMythicAt) telemetry.firstMythicAt = elapsed;
+    if (item.rarity === 'ascendant' && !telemetry.firstAscendantAt) telemetry.firstAscendantAt = elapsed;
+
+    if (item.rarity === 'epic' && !telemetry.milestonesShown.epic) {
+      telemetry.milestonesShown.epic = true;
+      addJournal('🎉', '¡Hito desbloqueado! Has obtenido tu primer objeto <b>epico</b>.');
+      toast('Primer Epic obtenido', 'gold');
+    }
+    if (item.rarity === 'mythic' && !telemetry.milestonesShown.mythic) {
+      telemetry.milestonesShown.mythic = true;
+      addJournal('🌠', '¡Hito mayor! Has obtenido tu primer objeto <b>mitico</b>.');
+      toast('Primer Mythic obtenido', 'violet');
+    }
+  }
+
   function grantRewards(reward, sourceLabel = 'Recompensa') {
     if (!reward) return;
+    const goldDelta = Number(reward.gold || 0);
+    const materialDelta = Number(reward.iron || 0)
+      + Number(reward.wood || 0)
+      + Number(reward.essence || 0)
+      + Number(reward.sigils || 0)
+      + Number(reward.echoShards || 0);
     Object.entries(reward).forEach(([key, value]) => {
       if (key === 'xp') {
         gainXp(value);
@@ -92,6 +211,9 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       state.stats.earnedGold += reward.gold;
       trackQuest('earnGold', reward.gold);
     }
+    if (goldDelta || materialDelta) {
+      recordEconomyDelta(goldDelta, materialDelta);
+    }
     addJournal('🎁', `${sourceLabel}: ${summarizeReward(reward)}`);
   }
 
@@ -99,7 +221,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     return Object.entries(reward).map(([k, v]) => {
       const label = {
         xp: 'XP', gold: 'oro', shards: 'fragmentos', iron: 'hierro', wood: 'madera',
-        essence: 'esencia', food: 'comida', potions: 'pociones', keys: 'llaves', relicDust: 'polvo reliquia'
+        essence: 'esencia', sigils: 'sigilos', echoShards: 'eco fragmentos', food: 'comida', potions: 'pociones', keys: 'llaves', relicDust: 'polvo reliquia'
       }[k] || k;
       return `+${fmt(v)} ${label}`;
     }).join(' · ');
@@ -118,6 +240,20 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
 
   function currentRank() {
     return progressionDomain.currentRank(state, guildTotal);
+  }
+
+  function withResourceTelemetry(action) {
+    const beforeGold = state.player.gold || 0;
+    const beforeMaterials = telemetryMaterialSum(state.player);
+    const result = action();
+    const afterGold = state.player.gold || 0;
+    const afterMaterials = telemetryMaterialSum(state.player);
+    const goldDelta = afterGold - beforeGold;
+    const materialDelta = afterMaterials - beforeMaterials;
+    if (goldDelta || materialDelta) {
+      recordEconomyDelta(goldDelta, materialDelta);
+    }
+    return result;
   }
 
   function offlineCatchup() {
@@ -224,6 +360,10 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     return combatDomain.tickCooldowns(actor);
   }
 
+  function onItemAcquired(item) {
+    recordItemTelemetry(item);
+  }
+
   function runCombat(enemy, context = { mode: 'arena' }) {
     const simulation = combatDomain.runCombat({
       enemy,
@@ -239,7 +379,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     state.stats.crits += statsDelta.crits;
     state.player.hp = clamp(player.hp, 1, getDerivedStats().maxHp);
 
-    const rewards = { gold: 0, xp: 0, iron: 0, wood: 0, essence: 0, keys: 0, potions: 0 };
+    const rewards = { gold: 0, xp: 0, iron: 0, wood: 0, essence: 0, sigils: 0, echoShards: 0, keys: 0, potions: 0 };
     let drop = null;
 
     if (victory) {
@@ -251,18 +391,28 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       rewards.iron = rand(0, 2 + zone.id);
       rewards.wood = rand(0, 1 + Math.floor(zone.id / 2));
       rewards.essence = Math.random() < 0.32 + zone.id * 0.02 ? rand(1, 2 + Math.floor(zone.id / 2)) : 0;
+      rewards.sigils = zone.id >= 3 && Math.random() < 0.11 + zone.id * 0.01 ? 1 + Math.floor(zone.id / 3) : 0;
+      rewards.echoShards = zone.id >= 5 && (foe.kind === 'elite' || foe.kind === 'boss') && Math.random() < 0.08 + zone.id * 0.01 ? 1 : 0;
       rewards.keys = context.mode === 'dungeon' && Math.random() < 0.13 ? 1 : 0;
       rewards.potions = Math.random() < 0.08 ? 1 : 0;
 
-      const dropChance = 0.26 + getLootLuck() * 0.7 + (foe.kind === 'elite' ? 0.10 : 0) + (foe.kind === 'boss' ? 0.16 : 0) + (context.mode === 'dungeon' ? 0.10 : 0);
+      const source = context.mode === 'dungeon' ? 'dungeon' : 'arena';
+      const dropChance = 0.26 + getLootLuck() * 0.68 + (foe.kind === 'elite' ? 0.1 : 0) + (foe.kind === 'boss' ? 0.16 : 0) + (context.mode === 'dungeon' ? 0.1 : 0);
       if (Math.random() < dropChance) {
-        const rarityRoll = Math.random() - getLootLuck() * 0.32 - zone.id * 0.01 - (foe.kind === 'elite' ? 0.015 : 0) - (foe.kind === 'boss' ? 0.04 : 0);
-        let forcedRarity = null;
-        if ((foe.kind === 'boss' || zone.id >= 5) && rarityRoll < 0.0025) forcedRarity = 'mythic';
-        else if ((foe.kind === 'elite' || foe.kind === 'boss' || zone.id >= 4) && rarityRoll < 0.013) forcedRarity = 'legendary';
-        else if (rarityRoll < 0.06) forcedRarity = 'epic';
-        else if (rarityRoll < 0.19) forcedRarity = 'rare';
-        drop = makeItem(pick(SLOT_ORDER), foe.level, forcedRarity);
+        const rolled = rollLoot({
+          source,
+          zoneId: zone.id,
+          enemyKind: foe.kind,
+          playerLevel: state.player.level,
+          ascension: state.player.ascension || 0,
+          itemLevel: foe.level + rand(0, 2),
+          lootLuck: getLootLuck(),
+          smartLoot: true,
+          equipment: state.player.equipment,
+          streakData: state.player.itemPity,
+        });
+        state.player.itemPity = rolled.streakData;
+        drop = rolled.item;
         acquireItem(drop);
       }
 
@@ -280,7 +430,10 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       toast(`Victoria sobre ${foe.name}`, 'success');
     } else {
       if (context.mode === 'arena') state.stats.losses += 1;
-      state.player.gold = Math.max(0, state.player.gold - rand(10, 25));
+      const beforeGold = state.player.gold;
+      const goldLoss = rand(10, 25);
+      state.player.gold = Math.max(0, state.player.gold - goldLoss);
+      recordEconomyDelta((state.player.gold || 0) - (beforeGold || 0), 0);
       addJournal('💀', `Has sido derrotado por <b>${foe.name}</b>. La multitud te abuchea.`);
       toast(`Derrota contra ${foe.name}`, 'danger');
     }
@@ -334,6 +487,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       addJournal,
       trackQuest,
       checkAchievements,
+      onItemAcquired,
     });
   }
 
@@ -358,11 +512,17 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function sellItem(itemId) {
-    return economyDomain.sellItem(state, itemId, { addJournal, trackQuest });
+    return withResourceTelemetry(() => economyDomain.sellItem(state, itemId, { addJournal, trackQuest }));
   }
 
   function salvageItem(itemId) {
-    return economyDomain.salvageItem(state, itemId, { addJournal, trackQuest });
+    return withResourceTelemetry(() => economyDomain.salvageItem(state, itemId, { addJournal, trackQuest }));
+  }
+
+  function previewSalvage(itemId) {
+    const item = economyDomain.getInventoryItem(state, itemId);
+    if (!item) return null;
+    return economyDomain.salvageYieldFor(item);
   }
 
   function usePotion() {
@@ -459,52 +619,95 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function refreshMarket(forcePaid = true) {
-    return economyDomain.refreshMarket(state, forcePaid, {
+    return withResourceTelemetry(() => economyDomain.refreshMarket(state, forcePaid, {
       toast,
       addJournal,
-    });
+      getLootLuck,
+    }));
   }
 
   function buyMarketItem(itemId) {
-    return economyDomain.buyMarketItem(state, itemId, {
+    return withResourceTelemetry(() => economyDomain.buyMarketItem(state, itemId, {
       maxInventory: maxInventory(),
       toast,
       addJournal,
       trackQuest,
       checkAchievements,
-    });
+      onItemAcquired,
+    }));
   }
 
   function buyResource(kind) {
-    return economyDomain.buyResource(state, kind, {
+    const beforeGold = state.player.gold;
+    const result = economyDomain.buyResource(state, kind, {
       toast,
       grantRewards,
     });
+    const goldDelta = (state.player.gold || 0) - (beforeGold || 0);
+    if (goldDelta) recordEconomyDelta(goldDelta, 0);
+    return result;
   }
 
-  function forgeItem(slot, tier = 'normal') {
-    return economyDomain.forgeItem(state, slot, tier, {
+  function previewCraftItem(slot, tier = 'basic') {
+    return economyDomain.previewCraftItem(state, slot, tier);
+  }
+
+  function craftItem(slot, tier = 'basic') {
+    return withResourceTelemetry(() => economyDomain.craftItem(state, { slot, tier }, {
       maxInventory: maxInventory(),
       toast,
       addJournal,
       trackQuest,
       checkAchievements,
-    });
+      getLootLuck,
+      onItemAcquired,
+    }));
   }
 
-  function upgradeEquipped(slot) {
-    return economyDomain.upgradeEquipped(state, slot, {
+  function enhanceItem(slot) {
+    return withResourceTelemetry(() => economyDomain.enhanceItem(state, slot, {
       toast,
       trackQuest,
       addJournal,
-    });
+    }));
+  }
+
+  function previewEnhanceItem(slot) {
+    return economyDomain.previewEnhanceItem(state, slot);
+  }
+
+  function reforgeItem(itemId) {
+    return withResourceTelemetry(() => economyDomain.reforgeItem(state, itemId, {
+      toast,
+      addJournal,
+    }));
+  }
+
+  function previewReforgeItem(itemId) {
+    return economyDomain.previewReforgeItem(state, itemId);
+  }
+
+  function transcendItem(itemId) {
+    return withResourceTelemetry(() => economyDomain.transcendItem(state, itemId, {
+      toast,
+      addJournal,
+    }));
+  }
+
+  function previewTranscendItem(itemId) {
+    return economyDomain.previewTranscendItem(state, itemId);
+  }
+
+  function forgeItem(slot, tier = 'normal') {
+    return craftItem(slot, tier === 'premium' ? 'advanced' : 'basic');
+  }
+
+  function upgradeEquipped(slot) {
+    return enhanceItem(slot);
   }
 
   function rerollItem(itemId) {
-    return economyDomain.rerollItem(state, itemId, {
-      toast,
-      addJournal,
-    });
+    return reforgeItem(itemId);
   }
 
 
@@ -534,6 +737,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     return activitiesDomain.completeExpedition(state, silent, {
       grantRewards,
       getDerivedStats,
+      getLootLuck,
       trackQuest,
       acquireItem,
       addJournal,
@@ -652,6 +856,8 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function hatchPet() {
+    const beforeGold = state.player.gold || 0;
+    const beforeMaterials = telemetryMaterialSum(state.player);
     if (state.player.pet) {
       toast('Ya tienes una mascota activa', 'cyan');
       return;
@@ -667,10 +873,13 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     state.player.petLevel = 1;
     state.player.petXp = 0;
     addJournal('🐾', `Incubas a <b>${pet.name}</b>. ${pet.desc}`);
+    recordEconomyDelta((state.player.gold || 0) - beforeGold, telemetryMaterialSum(state.player) - beforeMaterials);
     toast(`Mascota obtenida: ${pet.name}`, 'violet');
   }
 
   function feedPet() {
+    const beforeGold = state.player.gold || 0;
+    const beforeMaterials = telemetryMaterialSum(state.player);
     if (!state.player.pet) {
       toast('Aún no tienes mascota', 'danger');
       return;
@@ -688,6 +897,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       addJournal('🐾', `Tu mascota alcanza nivel ${state.player.petLevel}.`);
       toast(`Mascota nivel ${state.player.petLevel}`, 'success');
     }
+    recordEconomyDelta((state.player.gold || 0) - beforeGold, telemetryMaterialSum(state.player) - beforeMaterials);
   }
 
   function releasePet() {
@@ -751,6 +961,8 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function upgradeGuild(building) {
+    const beforeGold = state.player.gold || 0;
+    const beforeMaterials = telemetryMaterialSum(state.player);
     const levels = state.player.guild;
     if (!(building in levels)) return;
     const next = levels[building] + 1;
@@ -763,16 +975,17 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     state.player.gold -= gold;
     state.player.essence -= essence;
     levels[building] += 1;
+    recordEconomyDelta((state.player.gold || 0) - beforeGold, telemetryMaterialSum(state.player) - beforeMaterials);
     addJournal('🏛️', `Mejoras ${building} del gremio al nivel ${levels[building]}.`);
     checkAchievements();
   }
 
   function autoManage() {
-    return economyDomain.autoManage(state, {
+    return withResourceTelemetry(() => economyDomain.autoManage(state, {
       toast,
       trackQuest,
       addJournal,
-    });
+    }));
   }
 
   function autoHeal() {
@@ -789,6 +1002,19 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       used++;
     }
     addJournal('🩹', `Usas ${used} poción(es) para recuperarte.`);
+  }
+
+  function getPityStatus(source = 'arena') {
+    const pity = state.player.itemPity || {};
+    const bySource = pity.bySource || {};
+    const value = bySource[source] || pity;
+    return {
+      source,
+      epic: value.epic || 0,
+      mythic: value.mythic || 0,
+      ascendant: value.ascendant || 0,
+      total: value.total || 0,
+    };
   }
 
   window.AetherSystems = {
@@ -824,6 +1050,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     unequipItem,
     sellItem,
     salvageItem,
+    previewSalvage,
     usePotion,
     claimDaily,
     trainAttribute,
@@ -832,6 +1059,14 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     refreshMarket,
     buyMarketItem,
     buyResource,
+    previewCraftItem,
+    craftItem,
+    previewEnhanceItem,
+    enhanceItem,
+    previewReforgeItem,
+    reforgeItem,
+    previewTranscendItem,
+    transcendItem,
     forgeItem,
     upgradeEquipped,
     rerollItem,
@@ -856,5 +1091,6 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     upgradeGuild,
     autoManage,
     autoHeal,
+    getPityStatus,
   };
 })();

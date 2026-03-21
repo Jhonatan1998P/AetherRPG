@@ -4,9 +4,7 @@ export function createActivitiesDomain(deps) {
     ZONES,
     clone,
     rand,
-    pick,
-    SLOT_ORDER,
-    makeItem,
+    rollLoot,
     clamp,
   } = deps;
 
@@ -77,7 +75,7 @@ export function createActivitiesDomain(deps) {
   }
 
   function completeExpedition(state, silent, ctx) {
-    const { grantRewards, getDerivedStats, trackQuest, acquireItem, addJournal, toast } = ctx;
+    const { grantRewards, getDerivedStats, trackQuest, acquireItem, addJournal, toast, getLootLuck } = ctx;
     if (!state.timers.expedition) return;
     const exp = state.timers.expedition;
     state.timers.expedition = null;
@@ -95,8 +93,21 @@ export function createActivitiesDomain(deps) {
     state.stats.expeditions += 1;
     trackQuest('expeditions', 1);
 
-    if (Math.random() < 0.55 + zone.id * 0.03) {
-      const drop = makeItem(pick(SLOT_ORDER), state.player.level + zone.id, Math.random() < 0.12 ? 'epic' : null);
+    const dropChance = 0.48 + zone.id * 0.04 + Math.min(0.2, (getLootLuck ? getLootLuck() : 0) * 0.5);
+    if (Math.random() < dropChance) {
+      const rolled = rollLoot({
+        source: 'expedition',
+        zoneId: zone.id,
+        playerLevel: state.player.level,
+        itemLevel: state.player.level + zone.id + rand(0, 2),
+        ascension: state.player.ascension || 0,
+        lootLuck: getLootLuck ? getLootLuck() : 0,
+        smartLoot: true,
+        equipment: state.player.equipment,
+        streakData: state.player.itemPity,
+      });
+      state.player.itemPity = rolled.streakData;
+      const drop = rolled.item;
       acquireItem(drop);
       addJournal('🎒', `Encuentras <span class="rarity-${drop.rarity}">${drop.name}</span> en la expedición.`);
     }
