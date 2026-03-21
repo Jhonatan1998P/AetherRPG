@@ -55,16 +55,21 @@ export function createActivitiesDomain(deps) {
       toast('Ya tienes un trabajo en curso', 'cyan');
       return;
     }
-    if (state.player.energy < 12) {
-      toast('Necesitas al menos 12 de energía', 'danger');
+    const level = Math.max(1, Math.round(state.player.level || 1));
+    const energyCost = 10 + Math.round(job.duration / 30) + Math.floor(level / 10);
+    const staminaCost = Math.max(1, Math.floor(job.duration / 120));
+    if (state.player.energy < energyCost || state.player.stamina < staminaCost) {
+      toast(`Necesitas ${energyCost} de energía y ${staminaCost} de aguante`, 'danger');
       return;
     }
-    state.player.energy -= 12;
+    state.player.energy -= energyCost;
+    state.player.stamina -= staminaCost;
     state.timers.job = {
       id: job.id,
       name: job.name,
       endAt: Date.now() + job.duration * 1000,
       reward: clone(job.reward),
+      cost: { energy: energyCost, stamina: staminaCost },
       startedAt: Date.now(),
     };
     addJournal('🧰', `Comienzas el trabajo: <b>${job.name}</b>.`);
@@ -87,20 +92,23 @@ export function createActivitiesDomain(deps) {
       toast('Ya estás en expedición', 'cyan');
       return;
     }
-    const energyCost = zone.energyCost + Math.floor(durationSec / 40);
-    if (state.player.energy < energyCost || state.player.stamina < zone.staminaCost) {
+    const normalizedDuration = clamp(Math.round(durationSec || 0), 45, 240);
+    const energyCost = zone.energyCost + Math.floor(normalizedDuration / 28) + Math.ceil(zone.id / 2);
+    const staminaCost = zone.staminaCost + (normalizedDuration >= 120 ? 1 : 0) + (normalizedDuration >= 240 ? 1 : 0);
+    if (state.player.energy < energyCost || state.player.stamina < staminaCost) {
       toast('No tienes recursos para partir', 'danger');
       return;
     }
     state.player.energy -= energyCost;
-    state.player.stamina -= zone.staminaCost;
+    state.player.stamina -= staminaCost;
     state.timers.expedition = {
       zoneId,
-      endAt: Date.now() + durationSec * 1000,
-      durationSec,
+      endAt: Date.now() + normalizedDuration * 1000,
+      durationSec: normalizedDuration,
+      cost: { energy: energyCost, stamina: staminaCost },
       startedAt: Date.now(),
     };
-    addJournal('🧭', `Sales de expedición a <b>${zone.name}</b> durante ${durationSec}s.`);
+    addJournal('🧭', `Sales de expedición a <b>${zone.name}</b> durante ${normalizedDuration}s.`);
   }
 
   function completeExpedition(state, silent, ctx) {
@@ -109,24 +117,35 @@ export function createActivitiesDomain(deps) {
     const exp = state.timers.expedition;
     state.timers.expedition = null;
     const zone = ZONES.find((z) => z.id === exp.zoneId) || ZONES[0];
-    const scale = 1 + exp.durationSec / 90;
+    const scale = 1 + Math.sqrt(exp.durationSec / 90) * 0.78;
+    const riskFactor = 1 + zone.id * 0.05 + (exp.durationSec >= 120 ? 0.08 : 0) + (exp.durationSec >= 240 ? 0.12 : 0);
+    const essenceChance = clamp(0.32 + zone.id * 0.03 + (exp.durationSec >= 120 ? 0.08 : 0), 0.18, 0.72);
     const reward = {
-      gold: Math.round((90 + zone.id * 50 + state.player.level * 16) * scale * (1 + getDerivedStats().goldPct)),
-      xp: Math.round((55 + zone.id * 35 + state.player.level * 12) * scale),
-      iron: rand(1, 3 + zone.id),
-      wood: rand(1, 2 + Math.floor(zone.id / 2)),
-      essence: Math.random() < 0.45 ? rand(1, 2 + Math.floor(zone.id / 2)) : 0,
-      catalysts: exp.durationSec >= 120 && Math.random() < (0.08 + zone.id * 0.015) ? 1 : 0,
-      food: Math.random() < 0.5 ? 1 + Math.floor(zone.id / 2) : 0,
+      gold: Math.round((68 + zone.id * 36 + state.player.level * 11) * scale * riskFactor * (1 + getDerivedStats().goldPct)),
+      xp: Math.round((42 + zone.id * 24 + state.player.level * 9) * scale * riskFactor),
+      iron: rand(1, 2 + zone.id),
+      wood: rand(1, 1 + Math.floor(zone.id / 2)),
+      essence: Math.random() < essenceChance ? rand(1, 1 + Math.floor(zone.id / 2) + (exp.durationSec >= 120 ? 1 : 0)) : 0,
+      sigils: exp.durationSec >= 120 && Math.random() < (0.08 + zone.id * 0.015) ? 1 : 0,
+      catalysts: exp.durationSec >= 240 && Math.random() < (0.06 + zone.id * 0.012) ? 1 : 0,
+      food: Math.random() < 0.38 ? 1 + Math.floor(zone.id / 3) : 0,
     };
     grantRewards(reward, `Expedición — ${zone.name}`);
     state.stats.expeditions += 1;
     trackQuest('expeditions', 1);
 
-    const threatScore = Math.max(70, Math.round(94 + zone.id * 10 + exp.durationSec * 0.28 + rand(-6, 8)));
+    const threatScore = Math.max(78, Math.round(92 + zone.id * 12 + exp.durationSec * 0.34 + rand(-8, 10)));
     const enemyContext = expeditionEnemyContext(zone.id);
-    const enemyKind = exp.durationSec >= 120 ? 'elite' : 'normal';
-    const dropChance = 0.48 + zone.id * 0.04 + Math.min(0.2, (getLootLuck ? getLootLuck() : 0) * 0.5);
+    const enemyKind = exp.durationSec >= 240 ? 'boss' : exp.durationSec >= 120 ? 'elite' : 'normal';
+    const dropChance = clamp(
+      0.26
+      + zone.id * 0.028
+      + (exp.durationSec >= 120 ? 0.06 : 0)
+      + (exp.durationSec >= 240 ? 0.05 : 0)
+      + Math.min(0.18, (getLootLuck ? getLootLuck() : 0) * 0.4),
+      0.14,
+      0.76,
+    );
     if (Math.random() < dropChance) {
       const rolled = rollLoot({
         source: 'expedition',
@@ -135,8 +154,8 @@ export function createActivitiesDomain(deps) {
         enemyArchetype: enemyContext.enemyArchetype,
         enemyFamily: enemyContext.enemyFamily,
         threatScore,
-        rarityBias: Math.max(0, (threatScore - 100) * 0.0012),
-        pityUnits: clamp(threatScore / 100, 0.85, 1.3),
+        rarityBias: Math.max(0, (threatScore - 108) * 0.001),
+        pityUnits: clamp(threatScore / 100, 0.78, 1.36),
         playerLevel: state.player.level,
         itemLevel: state.player.level + zone.id + rand(0, 2),
         ascension: state.player.ascension || 0,

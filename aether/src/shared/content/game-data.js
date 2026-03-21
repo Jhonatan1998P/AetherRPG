@@ -968,9 +968,9 @@ export const REWARD_CURVES = {
 };
 
 export const JOBS = [
-  { id: 'guardia', name: 'Guardia del Foro', duration: 45, reward: { gold: 120, xp: 25, food: 1 }, desc: 'Patrulla, disciplina y monedas seguras.' },
-  { id: 'mercante', name: 'Estiba de Mercaderes', duration: 75, reward: { gold: 190, xp: 40, wood: 2, iron: 1 }, desc: 'Carga mercancias y quedate con una comision.' },
-  { id: 'arena', name: 'Espectaculo Menor', duration: 120, reward: { gold: 320, xp: 70, essence: 1, potions: 1 }, desc: 'Show de arena, apuestas y fama barata.' },
+  { id: 'guardia', name: 'Guardia del Foro', duration: 70, reward: { gold: 130, xp: 22, food: 1 }, desc: 'Trabajo seguro y lento: rendimiento estable sin riesgo de combate.' },
+  { id: 'mercante', name: 'Estiba de Mercaderes', duration: 130, reward: { gold: 230, xp: 36, wood: 2, iron: 1 }, desc: 'Comision moderada con mejor retorno si sostienes el ciclo.' },
+  { id: 'arena', name: 'Espectaculo Menor', duration: 210, reward: { gold: 390, xp: 58, essence: 1, potions: 1 }, desc: 'Ruta larga de oro: menos explosiva, mas util para progreso por etapas.' },
 ];
 
 export const PETS = [

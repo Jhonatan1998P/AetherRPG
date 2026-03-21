@@ -52,14 +52,14 @@ export function createSecondaryViews(deps) {
         ${pageLead('expedicion', isRunning
           ? `En curso: <b>${ZONES[state.timers.expedition.zoneId].name}</b> · <span data-live-timer="expedition">${expeditionTimerText()}</span>`
           : 'Sin expedición activa', [
-          actionButton('30s', 'btn-primary', `game.startExpedition(${state.player.zoneId}, 30)`),
-          actionButton('60s', '', `game.startExpedition(${state.player.zoneId}, 60)`),
-          actionButton('120s', 'btn-gold', `game.startExpedition(${state.player.zoneId}, 120)`)
+          actionButton('45s', 'btn-primary', `game.startExpedition(${state.player.zoneId}, 45)`),
+          actionButton('120s', '', `game.startExpedition(${state.player.zoneId}, 120)`),
+          actionButton('240s', 'btn-gold', `game.startExpedition(${state.player.zoneId}, 240)`)
         ].join(''))}
 
         ${actionBar([
-          actionButton('30s', 'btn-primary !py-3', `game.startExpedition(${state.player.zoneId}, 30)`),
-          actionButton('120s', 'btn-gold !py-3', `game.startExpedition(${state.player.zoneId}, 120)`)
+          actionButton('45s', 'btn-primary !py-3', `game.startExpedition(${state.player.zoneId}, 45)`),
+          actionButton('240s', 'btn-gold !py-3', `game.startExpedition(${state.player.zoneId}, 240)`)
         ])}
 
         <div class="grid xl:grid-cols-[1.05fr,.95fr] gap-5">
@@ -70,9 +70,9 @@ export function createSecondaryViews(deps) {
             <div class="mt-5">
               ${sectionHeader('Decisión', 'Elige duración', 'Duraciones cortas para control activo, largas para progreso pasivo.')}
               <div class="grid lg:grid-cols-3 gap-3">
-                ${durationChoiceCard(30, 'success', 'Salida corta para mantener flujo y reaccionar rápido.')}
-                ${durationChoiceCard(60, '', 'Balance para sesiones mixtas entre combate y gestión.')}
-                ${durationChoiceCard(120, 'warning', 'Más retorno si vas a dejar la partida corriendo.')}
+                ${durationChoiceCard(45, 'success', 'Salida corta: menor riesgo y coste moderado.')}
+                ${durationChoiceCard(120, '', 'Ruta media: mejor retorno con gasto extra de recursos.')}
+                ${durationChoiceCard(240, 'warning', 'Ruta larga: más botín, pero exige planificación.')}
               </div>
             </div>
           </section>
@@ -82,7 +82,7 @@ export function createSecondaryViews(deps) {
               ${sectionHeader('Soporte', 'Regla rápida')}
               <div class="grid gap-3">
                 ${infoCard('Estado actual', isRunning ? 'Ya tienes una expedición activa: espera el temporizador o cambia de foco.' : 'No hay expedición activa: puedes lanzar una ruta ahora.', 'surface-subtle')}
-                ${infoCard('Destino', 'Usa zonas cómodas cuando solo quieres materiales estables.', 'surface-subtle')}
+                ${infoCard('Destino', 'Las rutas largas consumen más aguante: evita quedarte seco antes de mazmorra.', 'surface-subtle')}
                 ${infoCard('Después', 'Cuando termine, vuelve a Arena o Inventario para cerrar el ciclo.', 'surface-subtle')}
               </div>
             </div>
@@ -93,8 +93,15 @@ export function createSecondaryViews(deps) {
   }
 
   function renderMazmorra() {
-    const hasKey = state.player.keys > 0;
     const floor = state.player.highestDungeonFloor || 1;
+    const dungeonCost = {
+      keys: 1 + Math.floor((Math.max(1, floor) - 1) / 4),
+      stamina: 2 + Math.floor((Math.max(1, floor) - 1) / 3),
+      energy: 9 + Math.max(1, floor) * 2,
+    };
+    const canEnter = state.player.keys >= dungeonCost.keys
+      && state.player.stamina >= dungeonCost.stamina
+      && state.player.energy >= dungeonCost.energy;
     const route = previewDungeonRoute(floor);
     const threatSummary = route.length
       ? `${route.map((entry) => `${entry.kind}: ${entry.threatLabel} ${Math.round(entry.threatScore)}`).join(' · ')}`
@@ -110,8 +117,8 @@ export function createSecondaryViews(deps) {
       : { gold: 0, xp: 0 };
     return `
       <div class="space-y-5">
-        ${pageLead('mazmorra', `Llaves: <b>${state.player.keys}</b> · Piso más alto: <b>${state.player.highestDungeonFloor}</b>`, [
-          actionButton('🗝️ Entrar', 'btn-gold', 'game.runDungeon()', 'Consume una llave y empieza una incursión de mazmorra.'),
+        ${pageLead('mazmorra', `Llaves: <b>${state.player.keys}</b> · Piso más alto: <b>${state.player.highestDungeonFloor}</b> · Costo: <b>${dungeonCost.keys}</b> llave(s), <b>${dungeonCost.stamina}</b> aguante, <b>${dungeonCost.energy}</b> energía`, [
+          actionButton('🗝️ Entrar', 'btn-gold', 'game.runDungeon()', `Consume ${dungeonCost.keys} llave(s), ${dungeonCost.stamina} de aguante y ${dungeonCost.energy} de energía.`),
           actionButton('🎒 Revisar equipo', '', "game.setView('inventario')")
         ].join(''))}
 
@@ -133,9 +140,9 @@ export function createSecondaryViews(deps) {
             </div>
 
             <div class="mt-4 grid sm:grid-cols-3 gap-3">
-              ${htmlStat('Llaves', state.player.keys, hasKey ? 'Listo para entrar' : 'Necesitas conseguir llaves')}
+              ${htmlStat('Llaves', state.player.keys, state.player.keys >= dungeonCost.keys ? 'Listo para entrar' : `Faltan ${dungeonCost.keys - state.player.keys} llave(s)`)}
               ${htmlStat('Piso récord', state.player.highestDungeonFloor, 'Tu tope actual')}
-              ${htmlStat('Estado', hasKey ? 'Disponible' : 'Bloqueado', hasKey ? 'Tienes acceso inmediato' : 'Visita mercado o recompensas')}
+              ${htmlStat('Estado', canEnter ? 'Disponible' : 'Bloqueado', canEnter ? 'Cumples coste de entrada' : 'No cumples llaves, aguante o energía')}
             </div>
 
             <div class="mt-4 grid sm:grid-cols-2 gap-3">
@@ -149,7 +156,7 @@ export function createSecondaryViews(deps) {
               ${sectionHeader('Decisión', '¿Entrar ahora?')}
               <div class="grid gap-3">
                 ${infoCard('Recompensa', 'Oro, XP, esencia, fragmentos, llaves extra y botín de mayor calidad.', 'reward-card', 'Las mazmorras elevan el techo de recompensa frente al farmeo básico.')}
-                ${infoCard('Checklist', 'Entra cuando tengas llaves, pociones y una build ya ordenada.', 'surface-subtle')}
+                ${infoCard('Checklist', `Coste actual: ${dungeonCost.keys} llave(s), ${dungeonCost.stamina} aguante, ${dungeonCost.energy} energía.`, 'surface-subtle')}
               </div>
             </div>
 
@@ -538,6 +545,8 @@ export function createSecondaryViews(deps) {
 
   function renderTrabajo() {
     const running = Boolean(state.timers.job);
+    const playerLevel = Math.max(1, state.player.level || 1);
+    const levelFactor = Math.floor(playerLevel / 10);
     return `
       <div class="space-y-5">
         ${pageLead('trabajo', running ? `En curso: <b>${state.timers.job.name}</b> · <span data-live-timer="job">${jobTimerText()}</span>` : 'Sin trabajo activo', [
@@ -549,17 +558,22 @@ export function createSecondaryViews(deps) {
           <section class="glass rounded-3xl p-5">
             ${sectionHeader('Contexto', 'Trabajos disponibles', 'Elige una fuente de oro estable cuando no quieras combate activo.')}
             <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
-              ${JOBS.map((job) => `
+              ${JOBS.map((job) => {
+                const energyCost = 10 + Math.round(job.duration / 30) + levelFactor;
+                const staminaCost = Math.max(1, Math.floor(job.duration / 120));
+                return `
                 <div class="glass rounded-2xl p-4">
                   <div class="font-black text-lg">${job.name}</div>
                   <div class="text-sm text-slate-300/75 mt-1">${job.desc}</div>
-                  <div class="grid grid-cols-2 gap-2 mt-3 text-sm">
+                  <div class="grid grid-cols-3 gap-2 mt-3 text-sm">
                     <div class="rounded-xl bg-white/[.04] p-2">Duración <b>${job.duration}s</b></div>
                     <div class="rounded-xl bg-white/[.04] p-2">Pago <b>${fmt(job.reward.gold)} oro</b></div>
+                    <div class="rounded-xl bg-white/[.04] p-2">Coste <b>${energyCost}E / ${staminaCost}A</b></div>
                   </div>
                   <button type="button" class="btn btn-gold mt-3 w-full" onclick="game.startJob('${job.id}')" ${tooltipAttr('Inicia este trabajo y bloquea el temporizador hasta su finalización.')}>Aceptar</button>
                 </div>
-              `).join('')}
+                `;
+              }).join('')}
             </div>
           </section>
 

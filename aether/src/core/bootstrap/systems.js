@@ -720,13 +720,24 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function previewDungeonRoute(floor = state.player.highestDungeonFloor || 1) {
+    const dungeonFloor = Math.max(1, floor);
     const zone = ZONES[Math.min(ZONES.length - 1, Math.floor((Math.max(1, floor) - 1) / 2))] || zoneForPlayer();
+    const scales = [1.05, 1.18, 1.34, 1.52].map((value) => dungeonFloor * value);
     return [
-      previewEncounter('normal', 'dungeon', { zone, extraScale: floor * 0.78 }),
-      previewEncounter('normal', 'dungeon', { zone, extraScale: floor * 0.84 }),
-      previewEncounter('elite', 'dungeon', { zone, extraScale: floor * 0.92 }),
-      previewEncounter('boss', 'dungeon', { zone, extraScale: floor * 1.02 }),
+      previewEncounter('normal', 'dungeon', { zone, extraScale: scales[0] }),
+      previewEncounter('normal', 'dungeon', { zone, extraScale: scales[1] }),
+      previewEncounter('elite', 'dungeon', { zone, extraScale: scales[2] }),
+      previewEncounter('boss', 'dungeon', { zone, extraScale: scales[3] }),
     ];
+  }
+
+  function dungeonEntryCost(floor = state.player.highestDungeonFloor || 1) {
+    const normalizedFloor = Math.max(1, Math.round(floor));
+    return {
+      keys: 1 + Math.floor((normalizedFloor - 1) / 4),
+      stamina: 2 + Math.floor((normalizedFloor - 1) / 3),
+      energy: 9 + normalizedFloor * 2,
+    };
   }
 
   function threatBandForScore(score = 0) {
@@ -1456,26 +1467,29 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function runDungeon() {
-    if (state.player.keys < 1) {
-      toast('Necesitas una llave de mazmorra', 'danger');
+    const floor = Math.max(1, state.player.highestDungeonFloor || 1);
+    const entryCost = dungeonEntryCost(floor);
+    if (state.player.keys < entryCost.keys) {
+      toast(`Necesitas ${entryCost.keys} llave(s) de mazmorra`, 'danger');
       return;
     }
-    if (state.player.stamina < 2) {
-      toast('Necesitas al menos 2 de aguante', 'danger');
+    if (state.player.stamina < entryCost.stamina || state.player.energy < entryCost.energy) {
+      toast(`Necesitas ${entryCost.stamina} de aguante y ${entryCost.energy} de energía`, 'danger');
       return;
     }
-    state.player.keys -= 1;
-    state.player.stamina -= 2;
+    state.player.keys -= entryCost.keys;
+    state.player.stamina -= entryCost.stamina;
+    state.player.energy -= entryCost.energy;
 
-    const floor = state.player.highestDungeonFloor;
     const zone = ZONES[Math.min(ZONES.length - 1, Math.floor((floor - 1) / 2))];
     const logLines = [];
     let success = true;
+    const scales = [1.05, 1.18, 1.34, 1.52].map((value) => floor * value);
     const enemies = [
-      makeEnemy(zone, 'normal', floor * 0.8, 'dungeon'),
-      makeEnemy(zone, 'normal', floor * 0.85, 'dungeon'),
-      makeEnemy(zone, 'elite', floor * 0.9, 'dungeon'),
-      makeEnemy(zone, 'boss', floor, 'dungeon'),
+      makeEnemy(zone, 'normal', scales[0], 'dungeon'),
+      makeEnemy(zone, 'normal', scales[1], 'dungeon'),
+      makeEnemy(zone, 'elite', scales[2], 'dungeon'),
+      makeEnemy(zone, 'boss', scales[3], 'dungeon'),
     ];
 
     enemies.forEach((enemy, index) => {
@@ -1489,16 +1503,19 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     if (success) {
       state.player.highestDungeonFloor += 1;
       const bonus = {
-        gold: 120 + floor * 55,
-        xp: 90 + floor * 42,
-        essence: 2 + Math.floor(floor / 3),
-        shards: floor % 3 === 0 ? 2 : 1,
+        gold: 70 + floor * 36,
+        xp: 62 + floor * 28,
+        essence: 1 + Math.floor(floor / 4),
+        shards: floor % 4 === 0 ? 1 : 0,
+        sigils: floor >= 6 && floor % 3 === 0 ? 1 : 0,
+        catalysts: floor >= 10 && floor % 5 === 0 ? 1 : 0,
       };
       grantRewards(bonus, `Cofre del piso ${floor}`);
       addJournal('🏰', `Limpias el piso ${floor} y avanzas al piso ${floor + 1}.`);
       toast(`Piso ${floor} superado`, 'gold');
     } else {
       addJournal('🕸️', `No logras superar el piso ${floor}.`);
+      toast('Incursión fallida: reajusta build o recursos', 'warning');
     }
 
     state.ui.modal = {

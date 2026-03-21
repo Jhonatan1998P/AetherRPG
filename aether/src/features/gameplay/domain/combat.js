@@ -119,6 +119,16 @@ const TOXIC_AFFIX_COMBOS = [
   ['entropico', 'muro_de_escudos', 'vampirico'],
 ];
 
+const ZONE_KIND_BUDGET_TUNING = {
+  0: { normal: 1.48, elite: 3.5, boss: 1.2 },
+  1: { normal: 1.08, elite: 0.9, boss: 0.92 },
+  2: { normal: 0.92, elite: 0.95, boss: 0.82 },
+  3: { normal: 0.94, elite: 0.9, boss: 0.88 },
+  4: { normal: 1.02, elite: 1.08, boss: 0.95 },
+  5: { normal: 1.14, elite: 1.12, boss: 1.09 },
+  6: { normal: 1.35, elite: 1.3, boss: 1.21 },
+};
+
 export function createCombatDomain(deps) {
   const {
     SKILLS,
@@ -322,6 +332,12 @@ export function createCombatDomain(deps) {
     const extraScaleFactor = 1 + clamp((context.extraScale || 0) * 0.01, -0.12, 0.24);
     const bandFactor = clamp((budgetBand.baseBudget || playerPower) / Math.max(1, playerPower), 0.92, 1.06);
     const bossRelief = kind === 'boss' ? 0.8 : 1;
+    const zoneTuning = ZONE_KIND_BUDGET_TUNING[zone.id] || null;
+    const budgetTuning = clamp(
+      Number(context.budgetTuning || (zoneTuning && zoneTuning[kind]) || 1),
+      0.65,
+      3.5,
+    );
 
     const budget = Math.max(
       18,
@@ -333,7 +349,8 @@ export function createCombatDomain(deps) {
       * adaptiveFactor
       * extraScaleFactor
       * bandFactor
-      * bossRelief,
+      * bossRelief
+      * budgetTuning,
     );
 
     return {
@@ -347,6 +364,7 @@ export function createCombatDomain(deps) {
       kindFactor,
       zoneFactor,
       adaptiveFactor,
+      budgetTuning,
       budgetBand,
       budget: softRound(budget, 2),
     };

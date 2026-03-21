@@ -220,7 +220,7 @@ function durationChoiceCard(seconds, tone, summary) {
           <div class="text-2xl font-black mt-1">${seconds}s</div>
           <p class="text-sm text-slate-300/74 mt-2">${summary}</p>
         </div>
-        ${statusChip(seconds <= 30 ? 'Corta' : seconds < 120 ? 'Media' : 'Larga', tone)}
+        ${statusChip(seconds <= 45 ? 'Corta' : seconds < 240 ? 'Media' : 'Larga', tone)}
       </div>
       <button type="button" class="btn ${tone === 'success' ? 'btn-primary' : tone === 'warning' ? 'btn-gold' : 'btn-violet'} mt-4 w-full" onclick="game.startExpedition(${state.player.zoneId}, ${seconds})">Enviar ${seconds}s</button>
     </div>

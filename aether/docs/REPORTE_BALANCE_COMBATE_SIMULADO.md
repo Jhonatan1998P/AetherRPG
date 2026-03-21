@@ -1,7 +1,7 @@
 # Reporte de Balance de Combate (Simulado)
 
-- Fecha: 2026-03-21T21:17:54.506Z
-- Iteraciones por escenario: 120
+- Fecha: 2026-03-21T22:56:59.672Z
+- Iteraciones por escenario: 1200
 - Escenarios: 7 zonas x (normal/elite/boss)
 - Modos: normal+elite en arena, boss en dungeon
 
@@ -9,38 +9,38 @@
 
 | ZonaId | Zona | Modo | Tipo | Winrate | Turnos medios | HP final medio | Threat medio | Estado |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | Distrito de Arena | arena | normal | 87.5% | 7.62 | 43.2% | 85.7 | winrate alto |
-| 0 | Distrito de Arena | arena | elite | 77.5% | 8.93 | 40.2% | 97.4 | winrate alto |
-| 0 | Distrito de Arena | dungeon | boss | 39.2% | 11.50 | 13.7% | 129.3 | OK |
-| 1 | Bosque Sangriento | arena | normal | 57.5% | 7.44 | 18.5% | 98.0 | winrate bajo |
-| 1 | Bosque Sangriento | arena | elite | 43.3% | 9.51 | 10.9% | 114.7 | OK |
-| 1 | Bosque Sangriento | dungeon | boss | 28.3% | 11.13 | 7.3% | 136.0 | winrate bajo |
-| 2 | Catacumbas Rotas | arena | normal | 41.7% | 8.97 | 9.8% | 102.1 | winrate bajo |
-| 2 | Catacumbas Rotas | arena | elite | 33.3% | 10.89 | 5.2% | 114.1 | winrate bajo |
-| 2 | Catacumbas Rotas | dungeon | boss | 9.2% | 12.32 | 1.6% | 138.6 | winrate bajo |
-| 3 | Dunas de Onice | arena | normal | 51.7% | 8.62 | 11.8% | 101.2 | winrate bajo |
-| 3 | Dunas de Onice | arena | elite | 31.7% | 9.87 | 7.4% | 116.3 | winrate bajo |
-| 3 | Dunas de Onice | dungeon | boss | 20.0% | 11.67 | 4.2% | 136.5 | winrate bajo |
-| 4 | Fortaleza del Eclipse | arena | normal | 57.5% | 9.13 | 13.4% | 100.5 | winrate bajo |
-| 4 | Fortaleza del Eclipse | arena | elite | 47.5% | 10.68 | 12.4% | 111.0 | OK |
-| 4 | Fortaleza del Eclipse | dungeon | boss | 28.3% | 13.61 | 6.0% | 132.0 | winrate bajo |
-| 5 | Necropolis del Hierro | arena | normal | 64.2% | 8.42 | 19.2% | 96.2 | OK |
-| 5 | Necropolis del Hierro | arena | elite | 63.3% | 10.43 | 16.1% | 107.7 | winrate alto |
-| 5 | Necropolis del Hierro | dungeon | boss | 45.0% | 13.69 | 12.8% | 127.5 | winrate alto |
-| 6 | Fisura Astral | arena | normal | 84.2% | 8.07 | 30.5% | 91.9 | winrate alto |
-| 6 | Fisura Astral | arena | elite | 74.2% | 10.22 | 24.2% | 103.2 | winrate alto |
-| 6 | Fisura Astral | dungeon | boss | 61.7% | 13.36 | 20.8% | 121.3 | winrate alto |
+| 0 | Distrito de Arena | arena | normal | 55.1% | 8.15 | 21.1% | 96.5 | OK |
+| 0 | Distrito de Arena | arena | elite | 55.0% | 9.64 | 21.0% | 109.0 | winrate alto |
+| 0 | Distrito de Arena | dungeon | boss | 33.7% | 12.20 | 12.3% | 132.6 | OK |
+| 1 | Bosque Sangriento | arena | normal | 52.7% | 7.88 | 15.3% | 100.1 | OK |
+| 1 | Bosque Sangriento | arena | elite | 46.6% | 9.29 | 12.4% | 112.9 | OK |
+| 1 | Bosque Sangriento | dungeon | boss | 35.0% | 11.40 | 9.6% | 132.5 | OK |
+| 2 | Catacumbas Rotas | arena | normal | 54.3% | 9.01 | 12.8% | 99.7 | OK |
+| 2 | Catacumbas Rotas | arena | elite | 43.4% | 10.57 | 9.5% | 112.6 | OK |
+| 2 | Catacumbas Rotas | dungeon | boss | 33.5% | 13.60 | 7.7% | 130.7 | OK |
+| 3 | Dunas de Onice | arena | normal | 56.3% | 8.68 | 15.1% | 99.7 | OK |
+| 3 | Dunas de Onice | arena | elite | 44.1% | 9.94 | 10.5% | 113.6 | OK |
+| 3 | Dunas de Onice | dungeon | boss | 35.9% | 12.39 | 8.3% | 131.5 | OK |
+| 4 | Fortaleza del Eclipse | arena | normal | 56.4% | 9.05 | 13.7% | 99.8 | OK |
+| 4 | Fortaleza del Eclipse | arena | elite | 39.6% | 10.77 | 8.1% | 114.0 | winrate bajo |
+| 4 | Fortaleza del Eclipse | dungeon | boss | 39.2% | 13.56 | 8.6% | 130.3 | OK |
+| 5 | Necropolis del Hierro | arena | normal | 58.3% | 8.99 | 14.3% | 98.3 | OK |
+| 5 | Necropolis del Hierro | arena | elite | 43.5% | 10.88 | 9.1% | 112.1 | OK |
+| 5 | Necropolis del Hierro | dungeon | boss | 33.7% | 13.39 | 7.4% | 130.4 | OK |
+| 6 | Fisura Astral | arena | normal | 54.4% | 8.97 | 11.3% | 99.7 | OK |
+| 6 | Fisura Astral | arena | elite | 48.0% | 10.54 | 9.5% | 112.3 | OK |
+| 6 | Fisura Astral | dungeon | boss | 36.8% | 13.13 | 7.7% | 129.8 | OK |
 
 ## Resumen por tipo
 
 | Tipo | Winrate medio | Turnos medios | Estado vs banda objetivo |
 | --- | --- | --- | --- |
-| normal | 63.5% | 8.32 | OK |
-| elite | 53.0% | 10.08 | OK |
-| boss | 33.1% | 12.47 | OK |
+| normal | 55.4% | 8.67 | OK |
+| elite | 45.7% | 10.23 | OK |
+| boss | 35.4% | 12.81 | OK |
 
 ## Bandas objetivo usadas
 
-- normal: winrate 60%-65%, turnos >= 6
-- elite: winrate 40%-55%, turnos >= 8
+- normal: winrate 50%-60%, turnos >= 6
+- elite: winrate 40%-50%, turnos >= 8
 - boss: winrate 30%-40%, turnos >= 10

@@ -62,8 +62,8 @@ const combatDomain = createCombatDomain({
 });
 
 const TARGETS = {
-  normal: { winrateMin: 0.6, winrateMax: 0.65, turnsMin: 6, turnsMax: Infinity },
-  elite: { winrateMin: 0.4, winrateMax: 0.55, turnsMin: 8, turnsMax: Infinity },
+  normal: { winrateMin: 0.5, winrateMax: 0.6, turnsMin: 6, turnsMax: Infinity },
+  elite: { winrateMin: 0.4, winrateMax: 0.5, turnsMin: 8, turnsMax: Infinity },
   boss: { winrateMin: 0.3, winrateMax: 0.4, turnsMin: 10, turnsMax: Infinity },
 };
 
@@ -235,8 +235,8 @@ function toMarkdown(results, fights) {
     '',
     '## Bandas objetivo usadas',
     '',
-    '- normal: winrate 60%-65%, turnos >= 6',
-    '- elite: winrate 40%-55%, turnos >= 8',
+    '- normal: winrate 50%-60%, turnos >= 6',
+    '- elite: winrate 40%-50%, turnos >= 8',
     '- boss: winrate 30%-40%, turnos >= 10',
     '',
   ].join('\n');
