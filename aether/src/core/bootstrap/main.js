@@ -1,4 +1,3 @@
-import '../../styles/tailwind.css';
 import './config.js';
 import './utils.js';
 import './model.js';

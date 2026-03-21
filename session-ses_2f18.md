@@ -2,7 +2,7 @@
 
 **Session ID:** ses_2f18e3239ffeINuoeLsq22ZOPf
 **Created:** 3/21/2026, 3:30:32 AM
-**Updated:** 3/21/2026, 3:57:45 AM
+**Updated:** 3/21/2026, 4:06:31 AM
 
 ---
 
@@ -553,6 +553,184 @@ Validación realizada:
 Si quieres, siguiente paso natural:
 1) te dejo un commit único con todo esto, o  
 2) hago una pasada final de “pixel polish” en 2-3 vistas que tú elijas (ej. Arena + Inventario + Mercado).
+
+---
+
+## User
+
+hay un problema no se ven estilos tanto en bpm run dev vomo en la preview se replit y en npm run buld es decir todo se ve blanco. que sucede?
+
+---
+
+## Assistant
+
+**Tool: grep**
+
+---
+
+## Assistant
+
+**Tool: grep**
+
+---
+
+## Assistant
+
+**Tool: read**
+
+---
+
+## Assistant
+
+**Tool: read**
+
+---
+
+## Assistant
+
+**Tool: bash**
+
+---
+
+## Assistant
+
+**Tool: glob**
+
+---
+
+## Assistant
+
+**Tool: read**
+
+---
+
+## Assistant
+
+**Tool: apply_patch**
+
+---
+
+## Assistant
+
+**Tool: apply_patch**
+
+---
+
+## Assistant
+
+**Tool: apply_patch**
+
+---
+
+## Assistant
+
+**Tool: bash**
+
+---
+
+## Assistant
+
+**Tool: read**
+
+---
+
+## Assistant
+
+Sí, buena alerta — encontré el problema y ya lo dejé corregido.
+
+Qué estaba pasando:
+- El CSS de Tailwind dependía de cargarse vía import en `main.js`. Si por cualquier motivo el módulo no entraba bien en runtime (o quedaba desfasado en preview), te quedabas sin estilos y todo se veía “blanco”.
+- Además, la detección de contenido de Tailwind estaba demasiado rígida para algunos contextos de ejecución.
+
+Qué corregí:
+- Cargué Tailwind **directamente en el HTML** para que no dependa del JS:
+  - `aether/index.html` → añadí  
+    ` <link rel="stylesheet" href="/src/styles/tailwind.css" />`
+- Quité el import CSS del bootstrap JS:
+  - `aether/src/core/bootstrap/main.js` → eliminé `import '../../styles/tailwind.css';`
+- Hice más robusto el scan de Tailwind:
+  - `tailwind.config.js` → ahora incluye:
+    - `./index.html`
+    - `./src/**/*.{js,jsx,ts,tsx,html}`
+    - `./aether/index.html`
+    - `./aether/src/**/*.{js,jsx,ts,tsx,html}`
+
+Validación:
+- `npm run build` compila OK.
+- El bundle final incluye CSS en `aether/dist/assets/index-B_Wd9s3F.css` y se inyecta en `aether/dist/index.html`.
+
+Qué hacer ahora:
+1. Reinicia dev server (importante):  
+   `pkill -f vite || true && npm run dev`
+2. Hard refresh del navegador (Ctrl+Shift+R).
+3. Si en Replit sigue cacheado, reinicia el Repl y vuelve a abrir preview.
+
+Si quieres, también te ajusto el script `dev` para usar puerto alterno automático cuando 5000 esté ocupado, y evitar ese dolor en Replit.
+
+---
+
+## User
+
+ahora vamos a implementar una estrategia para evitar la cache del navegador y asi siempre cargue tanto el html, css y js mas actualizado
+
+---
+
+## Assistant
+
+**Tool: apply_patch**
+
+---
+
+## Assistant
+
+**Tool: apply_patch**
+
+---
+
+## Assistant
+
+**Tool: bash**
+
+---
+
+## Assistant
+
+**Tool: apply_patch**
+
+---
+
+## Assistant
+
+**Tool: bash**
+
+---
+
+## Assistant
+
+Excelente, ya lo implementé para minimizar cache agresiva y forzar contenido actualizado.
+
+Qué cambié:
+- En `vite.config.mjs` agregué headers anti-cache para **dev** y **preview**:
+  - `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0`
+  - `Pragma: no-cache`
+  - `Expires: 0`
+  - `Surrogate-Control: no-store`
+- En `aether/index.html` agregué meta tags anti-cache para el documento HTML:
+  - `Cache-Control`, `Pragma`, `Expires`
+
+Archivos tocados:
+- `vite.config.mjs`
+- `aether/index.html`
+
+Validación:
+- `npm run build` compila correctamente.
+
+Importante (estrategia correcta en producción):
+- **HTML**: debe ser `no-store` / `no-cache` (ya lo cubrimos en entorno Vite).
+- **JS/CSS**: Vite ya los genera con hash (`index-xxxx.js`, `index-xxxx.css`), eso hace cache-busting automático por versión.
+- Si despliegas en otro servidor/CDN fuera de Vite, aplica las mismas cabeceras al `index.html` desde ese servidor también.
+
+Si quieres, te dejo también una configuración concreta para Nginx/Cloudflare/Replit Deploy para que quede blindado en producción real.
 
 ---
 
