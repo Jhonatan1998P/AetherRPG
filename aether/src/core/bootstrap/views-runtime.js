@@ -48,7 +48,7 @@ function sectionHeader(eyebrow, title, desc = '', action = '') {
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
         <div>
           <div class="section-eyebrow">${eyebrow}</div>
-          <div class="mt-1 flex items-center gap-2"><div class="section-title font-display">${title}</div>${tooltipIcon(desc || title)}</div>
+          <div class="mt-1 flex items-center gap-2"><div class="section-title font-display leading-tight">${title}</div>${tooltipIcon(desc || title)}</div>
           ${desc ? `<p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-300/76">${replaceEmojiIcons(desc)}</p>` : ''}
         </div>
         ${action ? `<div class="shrink-0">${replaceEmojiIcons(action)}</div>` : ''}
@@ -59,20 +59,21 @@ function sectionHeader(eyebrow, title, desc = '', action = '') {
 function infoCard(title, body, tone = '', tooltip = '') {
   return `
       <div class="surface-strong rounded-2xl p-4 ${tone}" ${tooltipAttr(tooltip || body)}>
-        <div class="mb-2 flex items-center gap-2 font-bold font-display text-white">${replaceEmojiIcons(title)}${tooltipIcon(tooltip || body)}</div>
+        <div class="mb-2 flex items-center gap-2 font-bold font-display text-white leading-tight">${replaceEmojiIcons(title)}${tooltipIcon(tooltip || body)}</div>
         <p class="text-sm text-slate-300/78 leading-relaxed">${replaceEmojiIcons(body)}</p>
       </div>
     `;
 }
 
 function actionButton(label, className, onClick, tooltip = '') {
-  return `<button class="btn ${className}" onclick="${onClick}" ${tooltipAttr(tooltip || stripHtml(label))}>${replaceEmojiIcons(label)}</button>`;
+  const cleanLabel = escapeAttr(stripHtml(label));
+  return `<button type="button" class="btn ${className}" onclick="${onClick}" aria-label="${cleanLabel}" ${tooltipAttr(tooltip || stripHtml(label))}>${replaceEmojiIcons(label)}</button>`;
 }
 
 function actionBar(actions) {
   return `
       <div class="mobile-cta-bar md:hidden">
-        <div class="glass-strong rounded-[1.6rem] p-3 grid grid-cols-2 gap-2">
+        <div class="glass-strong rounded-[1.6rem] p-3 grid grid-cols-2 gap-2 shadow-rail" role="group" aria-label="Acciones rápidas móviles">
           ${actions.join('')}
         </div>
       </div>
@@ -84,7 +85,7 @@ function pageLead(view, badge = '', actions = '') {
   const group = VIEW_GROUPS.find((groupItem) => groupItem.views.includes(view));
   const siblings = group ? group.views : [view];
   return `
-      <div class="glass rounded-3xl p-5 sm:p-6">
+      <div class="glass rounded-3xl p-5 sm:p-6 animate-rise-in">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
             <div class="inline-flex items-center gap-2 text-[11px] uppercase tracking-[.24em] text-cyan-200/75 mb-2">
@@ -95,14 +96,14 @@ function pageLead(view, badge = '', actions = '') {
             <p class="text-sm sm:text-base text-slate-300/78 mt-2 max-w-3xl">${replaceEmojiIcons(meta.desc)}</p>
             ${actions ? `<div class="hero-actions mt-4 max-w-2xl">${actions}</div>` : ''}
           </div>
-          ${badge ? `<div class="glass rounded-2xl px-4 py-3 text-sm text-slate-200/90 shrink-0">${replaceEmojiIcons(badge)}</div>` : ''}
+          ${badge ? `<div class="glass rounded-2xl px-4 py-3 text-sm text-slate-200/90 shrink-0 border border-cyan-300/14">${replaceEmojiIcons(badge)}</div>` : ''}
         </div>
         ${siblings.length > 1 ? `
           <div class="mt-4 pt-4 border-t border-white/10">
             <div class="text-[11px] uppercase tracking-[.18em] text-slate-300/55 mb-3">Navegación relacionada</div>
             <div class="view-links">
               ${siblings.map(sibling => `
-                <button class="view-chip ${state.currentView === sibling ? 'active' : ''}" onclick="game.setView('${sibling}')">
+                <button type="button" class="view-chip ${state.currentView === sibling ? 'active' : ''}" onclick="game.setView('${sibling}')" ${state.currentView === sibling ? 'aria-current="page"' : ''}>
                   ${icon(VIEW_META[sibling].icon, 'h-4 w-4')}
                   <span>${VIEW_META[sibling].label}</span>
                 </button>

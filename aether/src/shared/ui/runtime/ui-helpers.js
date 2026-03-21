@@ -93,5 +93,7 @@ export function tooltipAttr(text = '') {
 
 export function tooltipIcon(text = '') {
   const attrs = tooltipAttr(text);
-  return attrs ? `<span tabindex="0" class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-cyan-200/80 cursor-help" ${attrs}>${icon('info', 'h-3.5 w-3.5')}</span>` : '';
+  return attrs
+    ? `<span tabindex="0" role="button" aria-label="Más información" class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-cyan-200/80 cursor-help focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/65 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950" ${attrs}>${icon('info', 'h-3.5 w-3.5')}</span>`
+    : '';
 }

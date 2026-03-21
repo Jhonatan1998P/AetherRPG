@@ -35,37 +35,44 @@ export function createSecondaryViews(deps) {
   } = deps;
 
   function renderExpedicion() {
+    const isRunning = Boolean(state.timers.expedition);
     return `
       <div class="space-y-5">
-        ${pageLead('expedicion', state.timers.expedition ? `En curso: <b>${ZONES[state.timers.expedition.zoneId].name}</b> · <span data-live-timer="expedition">${expeditionTimerText()}</span>` : 'Sin expedición activa', [
+        ${pageLead('expedicion', isRunning
+          ? `En curso: <b>${ZONES[state.timers.expedition.zoneId].name}</b> · <span data-live-timer="expedition">${expeditionTimerText()}</span>`
+          : 'Sin expedición activa', [
           actionButton('30s', 'btn-primary', `game.startExpedition(${state.player.zoneId}, 30)`),
           actionButton('60s', '', `game.startExpedition(${state.player.zoneId}, 60)`),
           actionButton('120s', 'btn-gold', `game.startExpedition(${state.player.zoneId}, 120)`)
         ].join(''))}
+
         ${actionBar([
           actionButton('30s', 'btn-primary !py-3', `game.startExpedition(${state.player.zoneId}, 30)`),
           actionButton('120s', 'btn-gold !py-3', `game.startExpedition(${state.player.zoneId}, 120)`)
         ])}
+
         <div class="grid xl:grid-cols-[1.05fr,.95fr] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Paso 1', 'Elige destino', 'Primero eliges la zona. Después eliges cuánto tiempo comprometer.')}
+            ${sectionHeader('Contexto', 'Elige destino', 'Primero define una zona segura para tu estado actual de recursos.')}
             ${zoneSelector()}
+
             <div class="mt-5">
-              ${sectionHeader('Paso 2', 'Elige duración')}
+              ${sectionHeader('Decisión', 'Elige duración', 'Duraciones cortas para control activo, largas para progreso pasivo.')}
               <div class="grid lg:grid-cols-3 gap-3">
-                ${durationChoiceCard(30, 'success', 'Salida corta para mantener el flujo.')}
-                ${durationChoiceCard(60, '', 'Punto medio si sigues tocando otras vistas.')}
-                ${durationChoiceCard(120, 'warning', 'Más retorno, más espera.')}
+                ${durationChoiceCard(30, 'success', 'Salida corta para mantener flujo y reaccionar rápido.')}
+                ${durationChoiceCard(60, '', 'Balance para sesiones mixtas entre combate y gestión.')}
+                ${durationChoiceCard(120, 'warning', 'Más retorno si vas a dejar la partida corriendo.')}
               </div>
             </div>
           </section>
+
           <aside class="stack-compact">
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Qué mirar', 'Solo tres ideas')}
+              ${sectionHeader('Soporte', 'Regla rápida')}
               <div class="grid gap-3">
-                ${infoCard('Destino', 'Usa zonas ya cómodas si solo buscas recursos seguros.', 'surface-subtle')}
-                ${infoCard('Duración', 'Cuanto más larga, más sentido tiene si vas a dejar el juego corriendo.', 'surface-subtle')}
-                ${infoCard('Después', 'Cuando termine, decide entre Arena para seguir progresando o Inventario para ordenar.', 'surface-subtle')}
+                ${infoCard('Estado actual', isRunning ? 'Ya tienes una expedición activa: espera el temporizador o cambia de foco.' : 'No hay expedición activa: puedes lanzar una ruta ahora.', 'surface-subtle')}
+                ${infoCard('Destino', 'Usa zonas cómodas cuando solo quieres materiales estables.', 'surface-subtle')}
+                ${infoCard('Después', 'Cuando termine, vuelve a Arena o Inventario para cerrar el ciclo.', 'surface-subtle')}
               </div>
             </div>
           </aside>
@@ -75,32 +82,50 @@ export function createSecondaryViews(deps) {
   }
 
   function renderMazmorra() {
+    const hasKey = state.player.keys > 0;
     return `
       <div class="space-y-5">
         ${pageLead('mazmorra', `Llaves: <b>${state.player.keys}</b> · Piso más alto: <b>${state.player.highestDungeonFloor}</b>`, [
           actionButton('🗝️ Entrar', 'btn-gold', 'game.runDungeon()', 'Consume una llave y empieza una incursión de mazmorra.'),
           actionButton('🎒 Revisar equipo', '', "game.setView('inventario')")
         ].join(''))}
+
         ${actionBar([
           actionButton('🗝️ Entrar', 'btn-gold !py-3', 'game.runDungeon()'),
           actionButton('🎒 Equipo', '!py-3', "game.setView('inventario')")
         ])}
+
         <div class="grid xl:grid-cols-[1.05fr,.95fr] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Recorrido', 'La mazmorra de este intento', 'Aquí solo ves la ruta y decides si entrar o prepararte mejor.')}
+            ${sectionHeader('Contexto', 'Ruta de incursión', 'La mazmorra tiene un recorrido fijo por intento: entra solo cuando estés listo.')}
             <div class="grid gap-2 text-sm">
-              <div class="rounded-xl bg-white/[.04] p-3">1. Enemigo base</div>
-              <div class="rounded-xl bg-white/[.04] p-3">2. Enemigo base</div>
-              <div class="rounded-xl bg-white/[.04] p-3">3. Enemigo élite</div>
-              <div class="rounded-xl bg-white/[.04] p-3">4. Jefe del piso</div>
+              <div class="surface-subtle rounded-xl p-3 flex items-center justify-between"><span>1. Enemigo base</span>${statusChip('Entrada')}</div>
+              <div class="surface-subtle rounded-xl p-3 flex items-center justify-between"><span>2. Enemigo base</span>${statusChip('Presión')}</div>
+              <div class="surface-subtle rounded-xl p-3 flex items-center justify-between"><span>3. Enemigo élite</span>${statusChip('Riesgo', 'warning')}</div>
+              <div class="surface-subtle rounded-xl p-3 flex items-center justify-between"><span>4. Jefe del piso</span>${statusChip('Pico', 'danger')}</div>
+            </div>
+
+            <div class="mt-4 grid sm:grid-cols-3 gap-3">
+              ${htmlStat('Llaves', state.player.keys, hasKey ? 'Listo para entrar' : 'Necesitas conseguir llaves')}
+              ${htmlStat('Piso récord', state.player.highestDungeonFloor, 'Tu tope actual')}
+              ${htmlStat('Estado', hasKey ? 'Disponible' : 'Bloqueado', hasKey ? 'Tienes acceso inmediato' : 'Visita mercado o recompensas')}
             </div>
           </section>
+
           <aside class="stack-compact">
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Recompensa', 'Por qué vale la pena')}
+              ${sectionHeader('Decisión', '¿Entrar ahora?')}
               <div class="grid gap-3">
-                ${infoCard('Cofre del piso', 'Oro, XP, esencia, fragmentos, llaves extra y botín de mejor calidad.', 'reward-card', 'Las mazmorras mejoran la calidad del botín y de los materiales.')}
-                ${infoCard('Cuándo entrar', 'Hazlo cuando tengas llaves y una configuración ya ordenada.', 'surface-subtle', 'Entra cuando tu equipo y habilidades ya estén en un estado estable.')}
+                ${infoCard('Recompensa', 'Oro, XP, esencia, fragmentos, llaves extra y botín de mayor calidad.', 'reward-card', 'Las mazmorras elevan el techo de recompensa frente al farmeo básico.')}
+                ${infoCard('Checklist', 'Entra cuando tengas llaves, pociones y una build ya ordenada.', 'surface-subtle')}
+              </div>
+            </div>
+
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Soporte', 'Siguiente paso')}
+              <div class="grid gap-2">
+                <button type="button" class="btn" onclick="game.setView('inventario')">Ajustar equipo</button>
+                <button type="button" class="btn" onclick="game.setView('arena')">Subir recursos en Arena</button>
               </div>
             </div>
           </aside>
@@ -113,30 +138,38 @@ export function createSecondaryViews(deps) {
     const bestVisible = [...state.market.items].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
     const affordableCount = state.market.items.filter((item) => (item.price || 0) <= state.player.gold).length;
     const upgradeCount = state.market.items.filter((item) => compareAgainstEquipped(item).tone === 'success').length;
+
     return `
       <div class="space-y-5">
         ${pageLead('mercado', `Oro disponible: <b>${fmt(state.player.gold)}</b>`, [
           actionButton('🔄 Refrescar', 'btn-primary', 'game.refreshMarket()', 'Renueva la rotación del mercado con nuevas ofertas.'),
           actionButton('🎒 Comparar con mochila', '', "game.setView('inventario')", 'Abre el inventario para comparar las ofertas con tu equipo actual.')
         ].join(''))}
+
         ${actionBar([
           actionButton('🔄 Refrescar', 'btn-primary !py-3', 'game.refreshMarket()'),
           actionButton('🎒 Mochila', '!py-3', "game.setView('inventario')")
         ])}
+
         <div class="grid xl:grid-cols-[minmax(0,1fr),320px] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Rotación actual', 'Compra solo mejoras claras', 'El mercado prioriza piezas de equipo. Consumibles y ayuda contextual quedan en módulos secundarios.')}
+            ${sectionHeader('Contexto', 'Rotación actual', 'Compra solo mejoras reales: evita gastar oro en cambios de impacto bajo.')}
+
             <div class="grid sm:grid-cols-3 gap-3 mb-4">
               ${htmlStat('Comprables', affordableCount, 'Con tu oro actual')}
-              ${htmlStat('Mejoras', upgradeCount, 'Frente a lo equipado')}
+              ${htmlStat('Mejoras', upgradeCount, 'Frente al equipo equipado')}
               ${htmlStat('Oferta top', bestVisible ? SLOT_NAMES[bestVisible.slot] : '—', bestVisible ? bestVisible.name : 'Sin oferta destacada')}
             </div>
+
             ${bestVisible ? `
               <div class="surface-strong reward-card rounded-2xl p-4 mb-4">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <div class="text-xs uppercase tracking-[.18em] text-slate-300/55">Oferta destacada</div>
-                    <div class="mt-1 flex flex-wrap items-center gap-2"><div class="font-black rarity-${bestVisible.rarity} text-lg leading-snug">${bestVisible.name}</div>${rarityBadge(bestVisible.rarity)}</div>
+                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                      <div class="font-black rarity-${bestVisible.rarity} text-lg leading-snug">${bestVisible.name}</div>
+                      ${rarityBadge(bestVisible.rarity)}
+                    </div>
                     <p class="text-sm text-slate-300/74 mt-2">${compareAgainstEquipped(bestVisible).detail}</p>
                   </div>
                   <div class="shrink-0 text-right">
@@ -146,6 +179,7 @@ export function createSecondaryViews(deps) {
                 </div>
               </div>
             ` : ''}
+
             <div class="grid md:grid-cols-2 2xl:grid-cols-3 gap-3">
               ${state.market.items.map((item) => {
                 const compare = compareAgainstEquipped(item);
@@ -159,30 +193,41 @@ export function createSecondaryViews(deps) {
                       </div>
                       ${statusChip(compare.label, compare.tone)}
                     </div>
+
                     <div class="grid grid-cols-2 gap-2 mt-3 text-sm">
                       ${itemStatGrid(item, 4)}
                     </div>
+
                     <div class="market-meta mt-3">
                       <span class="text-sm text-slate-300/72">${compare.detail}</span>
                       <span class="text-sm font-bold ${canBuy ? 'text-amber-200' : 'text-rose-200'}">${fmt(item.price)} oro</span>
                     </div>
-                    <button class="btn btn-gold mt-3 w-full" onclick="game.buyMarketItem('${item.id}')" ${canBuy ? '' : 'disabled'}>Comprar</button>
+
+                    <button type="button" class="btn btn-gold mt-3 w-full" onclick="game.buyMarketItem('${item.id}')" ${canBuy ? '' : 'disabled'}>Comprar</button>
                   </div>
                 `;
               }).join('')}
             </div>
           </section>
+
           <aside class="stack-compact">
-            <details class="glass rounded-3xl p-5" open>
-              <summary class="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-                <div class="text-[11px] uppercase tracking-[.18em] text-slate-300/55">Decisión</div>
-                <div class="mt-1 font-display font-extrabold text-lg leading-tight">Qué mirar antes de comprar</div>
-              </summary>
-              <div class="grid gap-3 mt-4">
-                ${infoCard('Oferta destacada', bestVisible ? `${bestVisible.name} lidera la rotación actual.` : 'No hay oferta destacada ahora mismo.', 'reward-card', 'El mercado castiga mucho más las rarezas altas: verás menos piezas legendarias y míticas.')}
-                ${infoCard('No fuerces compra', 'Si nada mejora de verdad, ahorra oro o ve a Forja.', 'surface-subtle')}
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Decisión', 'Qué mirar antes de comprar')}
+              <div class="grid gap-3">
+                ${infoCard('Oferta destacada', bestVisible ? `${bestVisible.name} lidera la rotación actual.` : 'No hay oferta destacada ahora mismo.', 'reward-card')}
+                ${infoCard('No fuerces compra', 'Si nada mejora de verdad, conserva oro para una mejor rotación o para forja.', 'surface-subtle')}
               </div>
-            </details>
+            </div>
+
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Soporte', 'Consumibles útiles')}
+              <div class="grid gap-2">
+                <button type="button" class="btn btn-success" onclick="game.buyResource('potion')" ${tooltipAttr('Compra una poción para curarte más tarde por 120 de oro.')}>🧪 Poción · 120 oro</button>
+                <button type="button" class="btn btn-violet" onclick="game.buyResource('key')" ${tooltipAttr('Compra una llave para acceder a mazmorras por 180 de oro.')}>🗝️ Llave · 180 oro</button>
+                <button type="button" class="btn btn-primary" onclick="game.buyResource('essence')" ${tooltipAttr('Compra esencia para forja y progresión premium por 140 de oro.')}>✨ Esencia · 140 oro</button>
+                <button type="button" class="btn" onclick="game.buyResource('food')" ${tooltipAttr('Compra comida para apoyar trabajos y mascotas por 65 de oro.')}>🍖 Comida x2 · 65 oro</button>
+              </div>
+            </div>
           </aside>
         </div>
       </div>
@@ -197,13 +242,15 @@ export function createSecondaryViews(deps) {
           actionButton('✨ Premium arma', 'btn-violet', "game.forgeItem('weapon', 'premium')", 'Forja un arma premium con mayor acceso a rarezas altas.'),
           actionButton('🎒 Revisar inventario', '', "game.setView('inventario')")
         ].join(''))}
+
         ${actionBar([
           actionButton('⚒️ Normal', 'btn-primary !py-3', "game.forgeItem('weapon', 'normal')"),
           actionButton('✨ Premium', 'btn-violet !py-3', "game.forgeItem('weapon', 'premium')")
         ])}
+
         <div class="grid xl:grid-cols-[1fr,340px] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Forja', 'Crea una pieza para un espacio', 'La forja común genera botín funcional. La forja premium empuja las rarezas altas, pero sigue siendo exigente.')}
+            ${sectionHeader('Contexto', 'Creación por espacio', 'Forja normal para volumen. Premium para apostar por rarezas altas.')}
             <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
               ${SLOT_ORDER.map((slot) => `
                 <div class="glass rounded-2xl p-4 forge-recipe-card">
@@ -214,16 +261,17 @@ export function createSecondaryViews(deps) {
                     <div class="rounded-xl bg-white/[.04] p-2" ${tooltipAttr('Forja premium: más costosa y con mejor acceso a rarezas altas.')}>Premium <b>esencia</b></div>
                   </div>
                   <div class="grid grid-cols-2 gap-2 mt-3">
-                    <button class="btn btn-primary !py-2" onclick="game.forgeItem('${slot}', 'normal')">Forjar</button>
-                    <button class="btn btn-violet !py-2" onclick="game.forgeItem('${slot}', 'premium')">Premium</button>
+                    <button type="button" class="btn btn-primary !py-2" onclick="game.forgeItem('${slot}', 'normal')">Forjar</button>
+                    <button type="button" class="btn btn-violet !py-2" onclick="game.forgeItem('${slot}', 'premium')">Premium</button>
                   </div>
                 </div>
               `).join('')}
             </div>
           </section>
+
           <aside class="stack-compact">
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Mejora', 'Solo piezas ya equipadas', 'Esta columna existe para reforzar lo que ya decidiste conservar.')}
+              ${sectionHeader('Decisión', 'Mejorar equipado', 'Invierte solo en piezas que ya decidiste conservar.')}
               <div class="space-y-3 mt-4">
                 ${['weapon', 'chest', 'ring', 'amulet'].map((slot) => {
                   const item = state.player.equipment[slot];
@@ -232,10 +280,18 @@ export function createSecondaryViews(deps) {
                       <div class="text-xs text-slate-300/55 uppercase tracking-[.18em]">${SLOT_NAMES[slot]}</div>
                       <div class="font-black ${item ? `rarity-${item.rarity}` : 'text-slate-400/80'}">${item ? item.name : 'Vacío'}</div>
                       <div class="text-sm text-slate-300/70 mt-1">${item ? `Nivel ${item.level} · Mejora +${item.upgrade || 0}` : 'Equipa algo para mejorarlo.'}</div>
-                      <button class="btn btn-gold mt-3 w-full" ${item ? `onclick="game.upgradeEquipped('${slot}')"` : 'disabled'} ${tooltipAttr('Sube el nivel de mejora de la pieza equipada y aumenta sus estadísticas.')}>⚒️ Mejorar</button>
+                      <button type="button" class="btn btn-gold mt-3 w-full" ${item ? `onclick="game.upgradeEquipped('${slot}')"` : 'disabled'} ${tooltipAttr('Sube el nivel de mejora de la pieza equipada y aumenta sus estadísticas.')}>⚒️ Mejorar</button>
                     </div>
                   `;
                 }).join('')}
+              </div>
+            </div>
+
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Soporte', 'Regla de gasto')}
+              <div class="grid gap-3">
+                ${infoCard('Hierro', 'Úsalo para generar volumen y buscar base útil.', 'surface-subtle')}
+                ${infoCard('Esencia', 'Resérvala para intentos premium y mejoras clave.', 'surface-subtle')}
               </div>
             </div>
           </aside>
@@ -252,15 +308,17 @@ export function createSecondaryViews(deps) {
       hunters: 'Mejor botín y hallazgos más finos.',
       arsenal: 'Más capacidad de inventario.',
     };
+
     return `
       <div class="space-y-5">
         ${pageLead('gremio', `Nivel total invertido: <b>${guildTotal()}</b>`, [
           actionButton('🪙 Ver mercado', '', "game.setView('mercado')"),
           actionButton('🏋️ Entrenar', 'btn-primary', "game.setView('entrenamiento')")
         ].join(''))}
+
         <div class="grid xl:grid-cols-[1fr,320px] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Mejoras del gremio', 'Invierte en un frente por vez', 'Cada edificio es una decisión de largo plazo.')}
+            ${sectionHeader('Contexto', 'Mejoras del gremio', 'Cada edificio empuja un estilo de progreso distinto.')}
             <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
               ${Object.entries(state.player.guild).map(([key, value]) => {
                 const next = value + 1;
@@ -276,17 +334,20 @@ export function createSecondaryViews(deps) {
                       <div class="rounded-xl bg-white/[.04] p-2">Oro <b>${fmt(gold)}</b></div>
                       <div class="rounded-xl bg-white/[.04] p-2">Esencia <b>${fmt(essence)}</b></div>
                     </div>
-                    <button class="btn btn-violet mt-3 w-full" onclick="game.upgradeGuild('${key}')">Mejorar</button>
+                    <button type="button" class="btn btn-violet mt-3 w-full" onclick="game.upgradeGuild('${key}')">Mejorar</button>
                   </div>
                 `;
               }).join('')}
             </div>
           </section>
-          <aside class="glass rounded-3xl p-5">
-            ${sectionHeader('Consejo', 'Cómo usarlo')}
-            <div class="grid gap-3">
-              ${infoCard('Especialízate', 'Sube uno o dos edificios primero en lugar de repartir demasiado.', 'surface-subtle')}
-              ${infoCard('Prioridad típica', 'Tesorería y Barracas suelen sentirse antes en la partida.', 'surface-subtle')}
+
+          <aside class="stack-compact">
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Decisión', 'Cómo repartir inversión')}
+              <div class="grid gap-3">
+                ${infoCard('Especialízate', 'Sube uno o dos edificios primero para sentir impacto temprano.', 'surface-subtle')}
+                ${infoCard('Prioridad típica', 'Tesorería y Barracas suelen notarse antes en la partida.', 'surface-subtle')}
+              </div>
             </div>
           </aside>
         </div>
@@ -301,9 +362,10 @@ export function createSecondaryViews(deps) {
           actionButton('👤 Perfil', '', "game.setView('perfil')"),
           actionButton('⚔️ Arena', 'btn-primary', "game.setView('arena')")
         ].join(''))}
+
         <div class="grid xl:grid-cols-[.95fr,1.05fr] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Atributos', 'Sube tu base', 'Primero mejoras atributos. Las habilidades quedan en la columna de apoyo.')}
+            ${sectionHeader('Contexto', 'Atributos base', 'Primero ajusta base estadística; después pule habilidades activas.')}
             <div class="grid sm:grid-cols-2 gap-3">
               ${[
                 ['strength', 'Fuerza', 'Ataque y robo de vida.'],
@@ -315,13 +377,14 @@ export function createSecondaryViews(deps) {
                   <div class="font-black">${label}</div>
                   <div class="text-sm text-slate-300/75 mt-1">${desc}</div>
                   <div class="text-sm mt-3">Nivel actual: <b>${state.player.training[key]}</b></div>
-                  <button class="btn btn-primary mt-3 w-full" onclick="game.trainAttribute('${key}')">Subir</button>
+                  <button type="button" class="btn btn-primary mt-3 w-full" onclick="game.trainAttribute('${key}')">Subir</button>
                 </div>
               `).join('')}
             </div>
           </section>
+
           <aside class="glass rounded-3xl p-5">
-            ${sectionHeader('Habilidades', 'Activa o mejora solo las importantes')}
+            ${sectionHeader('Decisión', 'Habilidades activas')}
             <div class="space-y-3">
               ${Object.values(SKILLS).map((skill) => `
                 <div class="glass rounded-2xl p-4">
@@ -329,8 +392,8 @@ export function createSecondaryViews(deps) {
                   <div class="text-sm text-slate-300/75 mt-1">${skill.desc}</div>
                   <div class="text-xs text-slate-300/60 mt-2">Recarga ${skill.cooldown} · Desbloqueo Nv ${skill.unlockLevel}</div>
                   <div class="grid grid-cols-2 gap-2 mt-3">
-                    <button class="btn !py-2" onclick="game.toggleSkill('${skill.id}')">${state.player.activeSkills.includes(skill.id) ? 'Quitar' : 'Equipar'}</button>
-                    <button class="btn btn-violet !py-2" ${state.player.unlockedSkills.includes(skill.id) ? `onclick="game.upgradeSkill('${skill.id}')"` : 'disabled'}>Mejorar</button>
+                    <button type="button" class="btn !py-2" onclick="game.toggleSkill('${skill.id}')">${state.player.activeSkills.includes(skill.id) ? 'Quitar' : 'Equipar'}</button>
+                    <button type="button" class="btn btn-violet !py-2" ${state.player.unlockedSkills.includes(skill.id) ? `onclick="game.upgradeSkill('${skill.id}')"` : 'disabled'}>Mejorar</button>
                   </div>
                 </div>
               `).join('')}
@@ -342,15 +405,17 @@ export function createSecondaryViews(deps) {
   }
 
   function renderTrabajo() {
+    const running = Boolean(state.timers.job);
     return `
       <div class="space-y-5">
-        ${pageLead('trabajo', state.timers.job ? `En curso: <b>${state.timers.job.name}</b> · <span data-live-timer="job">${jobTimerText()}</span>` : 'Sin trabajo activo', [
+        ${pageLead('trabajo', running ? `En curso: <b>${state.timers.job.name}</b> · <span data-live-timer="job">${jobTimerText()}</span>` : 'Sin trabajo activo', [
           actionButton('🧭 Expedición', '', "game.setView('expedicion')"),
           actionButton('💰 Mercado', 'btn-gold', "game.setView('mercado')")
         ].join(''))}
+
         <div class="grid xl:grid-cols-[1fr,320px] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Trabajos', 'Elige una fuente de oro', 'Esta vista queda solo para elegir un encargo.')}
+            ${sectionHeader('Contexto', 'Trabajos disponibles', 'Elige una fuente de oro estable cuando no quieras combate activo.')}
             <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
               ${JOBS.map((job) => `
                 <div class="glass rounded-2xl p-4">
@@ -360,16 +425,19 @@ export function createSecondaryViews(deps) {
                     <div class="rounded-xl bg-white/[.04] p-2">Duración <b>${job.duration}s</b></div>
                     <div class="rounded-xl bg-white/[.04] p-2">Pago <b>${fmt(job.reward.gold)} oro</b></div>
                   </div>
-                  <button class="btn btn-gold mt-3 w-full" onclick="game.startJob('${job.id}')" ${tooltipAttr('Inicia este trabajo y bloquea el temporizador hasta su finalización.')}>Aceptar</button>
+                  <button type="button" class="btn btn-gold mt-3 w-full" onclick="game.startJob('${job.id}')" ${tooltipAttr('Inicia este trabajo y bloquea el temporizador hasta su finalización.')}>Aceptar</button>
                 </div>
               `).join('')}
             </div>
           </section>
-          <aside class="glass rounded-3xl p-5">
-            ${sectionHeader('Cuándo usarlo', 'Regla rápida')}
-            <div class="grid gap-3">
-              ${infoCard('Trabajo', 'Úsalo cuando quieras oro estable sin pelear.', 'surface-subtle')}
-              ${infoCard('Alternativa', 'Si también quieres botín, Expedición suele darte más variedad.', 'surface-subtle')}
+
+          <aside class="stack-compact">
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Soporte', 'Regla rápida')}
+              <div class="grid gap-3">
+                ${infoCard('Estado', running ? 'Ya tienes un trabajo activo: espera el temporizador.' : 'No hay trabajo activo: puedes aceptar uno ahora.', 'surface-subtle')}
+                ${infoCard('Alternativa', 'Si también quieres botín, Expedición suele aportar más variedad.', 'surface-subtle')}
+              </div>
             </div>
           </aside>
         </div>
@@ -385,9 +453,10 @@ export function createSecondaryViews(deps) {
           actionButton('👤 Perfil', '', "game.setView('perfil')"),
           actionButton('🥚 Incubar', 'btn-violet', 'game.hatchPet()', 'Consume recursos para obtener una mascota aleatoria.')
         ].join(''))}
+
         <div class="grid xl:grid-cols-[1fr,320px] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Compañero', 'Gestiona solo tu mascota activa')}
+            ${sectionHeader('Contexto', 'Mascota activa', 'Gestiona alimentación y progreso solo del compañero que llevas activo.')}
             ${pet ? `
               <div class="glass rounded-2xl p-5">
                 <div class="text-cyan-200">${icon(pet.icon || 'paw', 'h-9 w-9')}</div>
@@ -398,24 +467,25 @@ export function createSecondaryViews(deps) {
                   ${htmlStat('XP', `${state.player.petXp}/${3 + state.player.petLevel}`)}
                 </div>
                 <div class="grid sm:grid-cols-2 gap-3 mt-4">
-                  <button class="btn btn-success" onclick="game.feedPet()">${icon('box', 'h-4 w-4')}<span>Alimentar</span></button>
-                  <button class="btn btn-danger" onclick="game.releasePet()" ${tooltipAttr('Libera la mascota actual y pierdes sus bonos activos.')}>Liberar</button>
+                  <button type="button" class="btn btn-success" onclick="game.feedPet()">${icon('box', 'h-4 w-4')}<span>Alimentar</span></button>
+                  <button type="button" class="btn btn-danger" onclick="game.releasePet()" ${tooltipAttr('Libera la mascota actual y pierdes sus bonos activos.')}>Liberar</button>
                 </div>
               </div>
             ` : `
               <div class="glass rounded-2xl p-5">
                 <p class="text-sm text-slate-300/75">Incuba un huevo con 5 fragmentos y 8 de esencia para recibir un compañero aleatorio.</p>
-                <button class="btn btn-violet mt-4" onclick="game.hatchPet()">${icon('spark', 'h-4 w-4')}<span>Incubar huevo</span></button>
+                <button type="button" class="btn btn-violet mt-4" onclick="game.hatchPet()">${icon('spark', 'h-4 w-4')}<span>Incubar huevo</span></button>
               </div>
             `}
           </section>
+
           <aside class="glass rounded-3xl p-5">
-            ${sectionHeader('Catálogo', 'Vista rápida')}
+            ${sectionHeader('Soporte', 'Catálogo rápido')}
             <div class="grid gap-3">
-              ${PETS.map((p) => `
+              ${PETS.map((entry) => `
                 <div class="glass rounded-2xl p-4">
-                  <div class="font-bold font-display inline-flex items-center gap-2">${icon(p.icon || 'paw', 'h-4 w-4')}<span>${p.name}</span></div>
-                  <div class="text-sm text-slate-300/75 mt-1">${p.desc}</div>
+                  <div class="font-bold font-display inline-flex items-center gap-2">${icon(entry.icon || 'paw', 'h-4 w-4')}<span>${entry.name}</span></div>
+                  <div class="text-sm text-slate-300/75 mt-1">${entry.desc}</div>
                 </div>
               `).join('')}
             </div>
@@ -433,9 +503,10 @@ export function createSecondaryViews(deps) {
           actionButton('🔱 Ascender', 'btn-gold', 'game.ascend()', 'Reinicia gran parte del progreso para ganar mejoras meta permanentes.'),
           actionButton('📘 Diario', '', "game.setView('diario')")
         ].join(''))}
+
         <div class="grid xl:grid-cols-[1fr,320px] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Hitos activos', 'Solo una selección visible', 'Los logros dejan de ser una pared de progreso. Aquí ves solo los más relevantes.')}
+            ${sectionHeader('Contexto', 'Hitos activos', 'Se muestra una selección corta para mantener foco de progresión.')}
             <div class="space-y-3">
               ${highlighted.map((achievement) => {
                 const progress = achievementProgress(achievement);
@@ -455,14 +526,16 @@ export function createSecondaryViews(deps) {
               }).join('')}
             </div>
           </section>
+
           <aside class="stack-compact">
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Ascensión', 'Reinicio con progreso meta')}
-              <p class="text-sm text-slate-300/75 mt-2">Hazla cuando quieras convertir una partida avanzada en progreso permanente.</p>
-              <button class="btn btn-gold mt-4 w-full" onclick="game.ascend()" ${tooltipAttr('Reinicia gran parte de la partida a cambio de progreso meta permanente.')}>🔱 Ascender</button>
+              ${sectionHeader('Decisión', 'Ascensión')}
+              <p class="text-sm text-slate-300/75 mt-2">Actívala cuando quieras convertir una partida avanzada en progreso permanente.</p>
+              <button type="button" class="btn btn-gold mt-4 w-full" onclick="game.ascend()" ${tooltipAttr('Reinicia gran parte de la partida a cambio de progreso meta permanente.')}>🔱 Ascender</button>
             </div>
+
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Altar', 'Inversión rápida')}
+              ${sectionHeader('Soporte', 'Altar de reliquias')}
               <div class="grid gap-3 mt-4">
                 ${[
                   ['wrath', 'Ira'],
@@ -470,7 +543,7 @@ export function createSecondaryViews(deps) {
                   ['vitality', 'Vitalidad'],
                   ['momentum', 'Impulso'],
                 ].map(([key, title]) => `
-                  <button class="btn btn-violet justify-between" onclick="game.spendRelic('${key}')" ${tooltipAttr(`Invierte polvo de reliquia en ${title.toLowerCase()} para obtener bonificaciones permanentes.`)}><span>${title}</span><span>Nv ${state.player.relics[key]}</span></button>
+                  <button type="button" class="btn btn-violet justify-between" onclick="game.spendRelic('${key}')" ${tooltipAttr(`Invierte polvo de reliquia en ${title.toLowerCase()} para obtener bonificaciones permanentes.`)}><span>${title}</span><span>Nv ${state.player.relics[key]}</span></button>
                 `).join('')}
               </div>
             </div>
@@ -494,9 +567,10 @@ export function createSecondaryViews(deps) {
           actionButton('🏆 Ver logros', '', "game.setView('logros')"),
           actionButton('📋 Resumen', 'btn-primary', "game.setView('resumen')")
         ].join(''))}
+
         <div class="grid xl:grid-cols-[1fr,300px] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Registro', 'Solo eventos recientes', 'El diario queda como historial consultable, no como otra pantalla cargada de decisiones.')}
+            ${sectionHeader('Contexto', 'Registro reciente', 'El diario es histórico: úsalo para revisar, no para decidir acciones inmediatas.')}
             <div class="text-sm text-slate-300/72 mb-4">Mostrando <b>${entries.length ? start + 1 : 0}</b>–<b>${Math.min(start + pageSize, entries.length)}</b> de <b>${entries.length}</b>.</div>
             <div class="space-y-3">
               ${pageEntries.map((entry) => `
@@ -508,11 +582,12 @@ export function createSecondaryViews(deps) {
             </div>
             ${pager(currentPage, totalPages, 'setJournalPage')}
           </section>
+
           <aside class="glass rounded-3xl p-5">
-            ${sectionHeader('Uso', 'Cómo leerlo')}
+            ${sectionHeader('Soporte', 'Uso recomendado')}
             <div class="grid gap-3">
-              ${infoCard('Consulta', 'Úsalo para revisar qué pasó, no para tomar decisiones inmediatas.', 'surface-subtle')}
-              ${infoCard('Después', 'Si buscas progreso, vuelve a Resumen o Arena.', 'surface-subtle')}
+              ${infoCard('Consulta', 'Revisa aquí eventos y recompensas pasadas.', 'surface-subtle')}
+              ${infoCard('Acción', 'Para progresar, vuelve a Resumen, Arena o Inventario.', 'surface-subtle')}
             </div>
           </aside>
         </div>

@@ -7,33 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Orbitron:wght@500;700;800;900&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-            display: ['Orbitron', 'Sora', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
-          },
-          boxShadow: {
-            neon: '0 0 0 1px rgba(34,211,238,.20), 0 0 24px rgba(34,211,238,.24), 0 18px 60px rgba(59,130,246,.20)',
-            violet: '0 0 0 1px rgba(168,85,247,.22), 0 0 28px rgba(168,85,247,.20), 0 20px 60px rgba(88,28,135,.22)',
-            gold: '0 0 0 1px rgba(250,204,21,.24), 0 0 24px rgba(250,204,21,.18), 0 18px 56px rgba(180,83,9,.22)',
-            pane: '0 20px 80px rgba(2,6,23,.52)',
-            insetglass: 'inset 0 1px 0 rgba(255,255,255,.14), inset 0 -1px 0 rgba(255,255,255,.03)'
-          },
-          backdropBlur: {
-            xs: '2px'
-          },
-          backgroundImage: {
-            'hud-grid': 'linear-gradient(rgba(148,163,184,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.06) 1px, transparent 1px)',
-            'panel-sheen': 'linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.04) 42%, rgba(34,211,238,.05) 100%)'
-          }
-        }
-      }
-    }
-  </script>
+  <!-- Tailwind is compiled by Vite using tailwind.config.js (no CDN). -->
     <!-- Removed external CSS; all styling will use Tailwind classes exclusively -->
 
     <!-- Runtime helper to map legacy class names to Tailwind utility classes. This adds Tailwind
@@ -44,65 +18,65 @@
       // Mapping from legacy class names to Tailwind classes. Keys can include a space to denote
       // modifier classes (e.g. "btn primary" maps only when an element has both classes).
       const TAILWIND_CLASS_MAP = {
-        'glass': 'bg-slate-950/58 bg-panel-sheen border border-white/12 backdrop-blur-2xl shadow-pane shadow-insetglass supports-[backdrop-filter]:bg-slate-950/42',
-        'glass-strong': 'bg-slate-950/72 bg-panel-sheen border border-cyan-300/12 backdrop-blur-[22px] shadow-pane shadow-insetglass supports-[backdrop-filter]:bg-slate-950/54',
-        'stat-pill': 'rounded-2xl border border-white/10 bg-white/[0.045] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_10px_30px_rgba(2,6,23,.18)]',
-        'btn': 'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-bold border text-white transition duration-200 transform hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed select-none backdrop-blur-md',
-        'btn-primary': 'border-cyan-300/35 bg-gradient-to-br from-cyan-400/28 via-sky-500/24 to-blue-600/26 shadow-neon hover:shadow-[0_0_0_1px_rgba(103,232,249,.32),0_0_28px_rgba(34,211,238,.28),0_18px_60px_rgba(14,116,144,.24)]',
-        'btn-violet': 'border-fuchsia-300/35 bg-gradient-to-br from-fuchsia-500/26 via-violet-500/24 to-purple-700/26 shadow-violet hover:shadow-[0_0_0_1px_rgba(216,180,254,.32),0_0_30px_rgba(168,85,247,.30),0_18px_60px_rgba(88,28,135,.26)]',
-        'btn-gold': 'border-amber-300/40 bg-gradient-to-br from-amber-400/30 via-yellow-400/22 to-orange-600/24 shadow-gold hover:shadow-[0_0_0_1px_rgba(252,211,77,.35),0_0_30px_rgba(250,204,21,.24),0_18px_60px_rgba(146,64,14,.26)]',
-        'btn-danger': 'border-rose-300/35 bg-gradient-to-br from-rose-500/28 via-pink-500/22 to-red-700/24 shadow-[0_0_0_1px_rgba(251,113,133,.18),0_0_24px_rgba(244,63,94,.16),0_18px_56px_rgba(127,29,29,.26)] hover:shadow-[0_0_0_1px_rgba(251,113,133,.30),0_0_28px_rgba(244,63,94,.24),0_18px_60px_rgba(127,29,29,.28)]',
-        'btn-success': 'border-emerald-300/35 bg-gradient-to-br from-emerald-400/28 via-green-500/20 to-teal-700/24 shadow-[0_0_0_1px_rgba(110,231,183,.18),0_0_24px_rgba(16,185,129,.18),0_18px_56px_rgba(6,78,59,.28)] hover:shadow-[0_0_0_1px_rgba(110,231,183,.30),0_0_28px_rgba(16,185,129,.24),0_18px_60px_rgba(6,78,59,.30)]',
-        'nav-link': 'group flex items-center gap-3 w-full rounded-2xl px-4 py-3 border border-white/8 bg-white/[0.035] backdrop-blur-md transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.07] hover:border-cyan-300/18',
-        'nav-link active': 'bg-gradient-to-br from-cyan-400/14 via-sky-500/10 to-violet-500/12 border-cyan-300/22 shadow-neon',
-        'mobile-nav': 'fixed inset-x-3 bottom-3 z-40 rounded-[1.65rem] border border-cyan-300/15 bg-slate-950/78 backdrop-blur-2xl shadow-pane shadow-insetglass',
+        'glass': 'relative overflow-hidden bg-slate-950/62 border border-white/10 backdrop-blur-xl shadow-pane shadow-insetglass supports-[backdrop-filter]:bg-slate-950/46',
+        'glass-strong': 'relative overflow-hidden bg-slate-950/74 border border-cyan-300/14 backdrop-blur-2xl shadow-pane shadow-insetglass supports-[backdrop-filter]:bg-slate-950/62',
+        'stat-pill': 'rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_12px_24px_rgba(2,6,23,.2)]',
+        'btn': 'relative inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border border-transparent text-slate-100 transition duration-200 ease-out touch-manipulation hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 disabled:shadow-none select-none',
+        'btn-primary': 'border-cyan-300/30 bg-gradient-to-br from-cyan-400/24 via-sky-500/16 to-blue-700/22 shadow-neon hover:border-cyan-200/45 hover:bg-gradient-to-br hover:from-cyan-300/28 hover:via-sky-400/18 hover:to-blue-600/26',
+        'btn-violet': 'border-fuchsia-300/30 bg-gradient-to-br from-fuchsia-500/24 via-violet-500/16 to-purple-700/24 shadow-violet hover:border-fuchsia-200/45 hover:from-fuchsia-400/30 hover:via-violet-500/20 hover:to-purple-700/30',
+        'btn-gold': 'border-amber-300/30 bg-gradient-to-br from-amber-400/24 via-yellow-300/16 to-orange-700/24 shadow-gold hover:border-amber-200/45 hover:from-amber-300/30 hover:via-yellow-300/20 hover:to-orange-600/28',
+        'btn-danger': 'border-rose-300/32 bg-gradient-to-br from-rose-500/24 via-pink-500/16 to-red-700/24 shadow-[0_0_0_1px_rgba(251,113,133,.16),0_0_20px_rgba(244,63,94,.12),0_14px_42px_rgba(127,29,29,.3)] hover:border-rose-200/45',
+        'btn-success': 'border-emerald-300/32 bg-gradient-to-br from-emerald-400/24 via-emerald-500/16 to-teal-700/24 shadow-[0_0_0_1px_rgba(110,231,183,.16),0_0_20px_rgba(16,185,129,.12),0_14px_42px_rgba(6,78,59,.3)] hover:border-emerald-200/45',
+        'nav-link': 'group flex min-h-11 items-center gap-3 w-full rounded-2xl px-4 py-3 border border-white/8 bg-white/[0.03] backdrop-blur-md transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/[0.07] hover:border-cyan-300/24 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+        'nav-link active': 'bg-gradient-to-br from-cyan-400/16 via-sky-500/10 to-fuchsia-500/12 border-cyan-300/30 shadow-neon text-white',
+        'mobile-nav': 'fixed inset-x-3 bottom-3 z-40 rounded-[1.5rem] border border-cyan-300/16 bg-slate-950/82 backdrop-blur-2xl shadow-pane shadow-insetglass',
         'mobile-nav-grid': 'grid grid-cols-5 gap-2 p-2 pb-[calc(.55rem+env(safe-area-inset-bottom,0px))] items-stretch',
-        'mobile-nav-btn': 'relative flex flex-col items-center justify-center gap-2 w-full min-h-[76px] rounded-[1.2rem] px-3 py-3 border border-white/8 bg-white/[0.035] text-slate-100 transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:border-cyan-300/18',
-        'mobile-nav-btn active': 'bg-gradient-to-b from-cyan-400/16 via-sky-500/10 to-violet-500/12 border-cyan-300/28 shadow-neon',
-        'nav-icon': 'inline-flex h-5 w-5 items-center justify-center text-cyan-100 drop-shadow-[0_0_8px_rgba(34,211,238,.25)] [&_svg]:h-5 [&_svg]:w-5 [&_svg]:stroke-[1.9]',
-        'nav-label': 'block text-[10px] font-semibold leading-none tracking-[.02em] text-slate-200',
+        'mobile-nav-btn': 'relative flex min-h-[74px] w-full flex-col items-center justify-center gap-1.5 rounded-[1.1rem] px-2.5 py-2.5 border border-white/8 bg-white/[0.03] text-slate-100 transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/[0.08] hover:border-cyan-300/24 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+        'mobile-nav-btn active': 'bg-gradient-to-b from-cyan-400/16 via-sky-500/12 to-fuchsia-500/10 border-cyan-300/34 shadow-neon',
+        'nav-icon': 'inline-flex h-5 w-5 items-center justify-center text-cyan-100 drop-shadow-[0_0_8px_rgba(34,211,238,.28)] [&_svg]:h-5 [&_svg]:w-5 [&_svg]:stroke-[1.9]',
+        'nav-label': 'block text-[10px] font-semibold leading-none tracking-[.03em] text-slate-200',
         'status-chip': 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[.12em] bg-white/[0.06] border border-white/12 text-slate-200/90 backdrop-blur-md',
-        'status-chip success': 'bg-emerald-400/12 border-emerald-300/22 text-emerald-200',
-        'status-chip warning': 'bg-amber-400/12 border-amber-300/22 text-amber-200',
-        'status-chip danger': 'bg-rose-400/12 border-rose-300/22 text-rose-200',
-        'surface-muted': 'bg-white/[0.035] border border-white/8 backdrop-blur-md',
-        'surface-subtle': 'bg-white/[0.028] border border-white/6 backdrop-blur-md',
-        'surface-strong': 'bg-gradient-to-br from-white/[0.09] via-white/[0.05] to-cyan-400/[0.03] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_16px_44px_rgba(2,6,23,.26)] backdrop-blur-lg',
-        'section-eyebrow': 'text-[11px] uppercase tracking-[.22em] text-cyan-200/65',
+        'status-chip success': 'bg-emerald-400/12 border-emerald-300/24 text-emerald-200',
+        'status-chip warning': 'bg-amber-400/12 border-amber-300/24 text-amber-200',
+        'status-chip danger': 'bg-rose-400/12 border-rose-300/24 text-rose-200',
+        'surface-muted': 'bg-white/[0.03] border border-white/8 backdrop-blur-md',
+        'surface-subtle': 'bg-white/[0.022] border border-white/8 backdrop-blur-md',
+        'surface-strong': 'bg-gradient-to-br from-white/[0.085] via-white/[0.045] to-cyan-400/[0.025] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_16px_40px_rgba(2,6,23,.24)] backdrop-blur-lg',
+        'section-eyebrow': 'text-[11px] uppercase tracking-[.22em] text-cyan-200/68',
         'section-title': 'text-xl sm:text-2xl font-display font-extrabold tracking-[0.01em] text-white',
-        'empty-state': 'p-4 rounded-2xl border border-dashed border-cyan-300/18 bg-white/[0.035] text-slate-300/80 backdrop-blur-md',
+        'empty-state': 'p-4 rounded-2xl border border-dashed border-cyan-300/20 bg-white/[0.032] text-slate-300/82 backdrop-blur-md',
         'kpi-rail': 'grid gap-3 grid-cols-2 sm:grid-cols-4',
-        'mobile-sheet-title': 'text-[11px] uppercase tracking-[.22em] text-cyan-200/55 mb-2 pl-1',
+        'mobile-sheet-title': 'text-[11px] uppercase tracking-[.2em] text-cyan-200/58 mb-2 pl-1',
         'view-links': 'flex flex-wrap gap-2',
         'hero-actions': 'grid gap-3 sm:grid-cols-2',
-        'mobile-cta-bar': 'sticky bottom-24 z-20',
+        'mobile-cta-bar': 'sticky bottom-[calc(var(--mobile-nav-h,0px)+env(safe-area-inset-bottom,0px)+.55rem)] z-20',
         'inventory-actions': 'grid grid-cols-2 gap-2',
-        'view-chip': 'inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/8 bg-white/[0.04] text-sm font-semibold text-slate-100 transition duration-200 hover:bg-white/[0.08] hover:border-cyan-300/18',
-        'view-chip active': 'bg-gradient-to-br from-cyan-400/18 via-sky-500/12 to-violet-500/14 border-cyan-300/24 shadow-neon',
-        'filter-pill': 'inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-semibold text-slate-200 backdrop-blur-md hover:border-cyan-300/18 hover:bg-white/[0.08]',
-        'tab-btn': 'border-cyan-300/20',
-        'tab-btn active': 'bg-gradient-to-br from-cyan-400/18 via-sky-500/12 to-violet-500/12 border-cyan-300/28 shadow-neon',
+        'view-chip': 'inline-flex min-h-10 items-center gap-2 px-3 py-2 rounded-xl border border-white/8 bg-white/[0.035] text-sm font-semibold text-slate-100 transition duration-200 ease-out hover:bg-white/[0.08] hover:border-cyan-300/22 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+        'view-chip active': 'bg-gradient-to-br from-cyan-400/16 via-sky-500/12 to-fuchsia-500/12 border-cyan-300/30 shadow-neon',
+        'filter-pill': 'inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-200 backdrop-blur-md hover:border-cyan-300/22 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+        'tab-btn': 'border-cyan-300/22',
+        'tab-btn active': 'bg-gradient-to-br from-cyan-400/18 via-sky-500/12 to-fuchsia-500/12 border-cyan-300/32 shadow-neon',
         'filters-row': 'flex flex-wrap gap-2',
         'stack-compact': 'space-y-3',
         'ring': 'ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,.08)]',
-        'item-card': 'transition duration-200 hover:-translate-y-1 hover:shadow-[0_18px_50px_rgba(8,15,40,.35)]',
-        'inventory-card-pro': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-cyan-300/35 before:to-transparent',
-        'market-card': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-fuchsia-300/35 before:to-transparent',
-        'forge-recipe-card': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-amber-300/35 before:to-transparent',
-        'forge-upgrade-card': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-emerald-300/35 before:to-transparent',
-        'history-entry': 'relative overflow-hidden border border-white/8 hover:border-cyan-300/16 hover:bg-white/[0.055]',
-        'elite-card': 'bg-gradient-to-br from-violet-400/14 via-fuchsia-500/10 to-slate-900/20 border border-fuchsia-300/16',
-        'reward-card': 'bg-gradient-to-br from-amber-300/14 via-orange-400/10 to-slate-900/20 border border-amber-300/16',
+        'item-card': 'transition duration-200 ease-out hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(8,15,40,.34)]',
+        'inventory-card-pro': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-cyan-300/30 before:to-transparent',
+        'market-card': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-fuchsia-300/30 before:to-transparent',
+        'forge-recipe-card': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-amber-300/30 before:to-transparent',
+        'forge-upgrade-card': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-emerald-300/30 before:to-transparent',
+        'history-entry': 'relative overflow-hidden border border-white/8 hover:border-cyan-300/20 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950',
+        'elite-card': 'bg-gradient-to-br from-fuchsia-400/12 via-violet-500/10 to-slate-900/24 border border-fuchsia-300/18',
+        'reward-card': 'bg-gradient-to-br from-amber-300/14 via-orange-400/10 to-slate-900/24 border border-amber-300/18',
         'market-meta': 'flex items-center justify-between gap-3',
         'mobile-sheet-group': 'rounded-2xl border border-white/8 bg-white/[0.03] p-3 backdrop-blur-md',
-        'bar': 'w-full h-3 rounded-full overflow-hidden border border-white/8 bg-slate-900/70 shadow-[inset_0_2px_10px_rgba(0,0,0,.28)]',
+        'bar': 'w-full h-3 rounded-full overflow-hidden border border-white/8 bg-slate-900/72 shadow-[inset_0_2px_10px_rgba(0,0,0,.28)]',
         'cv-auto': 'min-h-[1px]',
         'rarity-common': 'text-slate-200',
         'rarity-uncommon': 'text-emerald-300',
         'rarity-rare': 'text-sky-300',
         'rarity-epic': 'text-violet-300',
         'rarity-legendary': 'text-amber-300',
-        'rarity-mythic': 'text-fuchsia-300 drop-shadow-[0_0_12px_rgba(232,121,249,.34)]'
+        'rarity-mythic': 'text-fuchsia-300 drop-shadow-[0_0_10px_rgba(217,70,239,.34)]'
       };
       /**
        * Apply Tailwind classes to elements based on the legacy class names defined in the map.
@@ -137,24 +111,36 @@
 
         const tooltipEl = document.createElement('div');
         tooltipEl.id = 'ui-tooltip';
-        tooltipEl.className = 'pointer-events-none fixed z-[80] hidden max-w-[280px] rounded-2xl border border-cyan-300/20 bg-slate-950/88 px-3 py-2 text-xs leading-relaxed text-slate-100 backdrop-blur-xl shadow-[0_12px_40px_rgba(2,6,23,.55)]';
+        tooltipEl.className = 'pointer-events-none fixed z-[80] hidden max-w-[290px] rounded-2xl border border-cyan-300/24 bg-slate-950/92 px-3 py-2 text-xs leading-relaxed text-slate-100 backdrop-blur-xl shadow-[0_12px_40px_rgba(2,6,23,.55)] opacity-0 translate-y-1 transition duration-150 ease-out';
         document.body.appendChild(tooltipEl);
 
         let activeTooltipTarget = null;
+        let hideTimer = 0;
 
         function showTooltip(target) {
           const text = target && target.getAttribute('data-tooltip');
           if (!text) return;
+          if (hideTimer) {
+            clearTimeout(hideTimer);
+            hideTimer = 0;
+          }
           activeTooltipTarget = target;
           tooltipEl.innerHTML = text;
           tooltipEl.classList.remove('hidden');
+          requestAnimationFrame(() => {
+            tooltipEl.classList.remove('opacity-0', 'translate-y-1');
+          });
           positionTooltip(target);
         }
 
         function hideTooltip(target) {
           if (!activeTooltipTarget || (target && activeTooltipTarget !== target && activeTooltipTarget.contains(target))) return;
           activeTooltipTarget = null;
-          tooltipEl.classList.add('hidden');
+          tooltipEl.classList.add('opacity-0', 'translate-y-1');
+          hideTimer = window.setTimeout(() => {
+            tooltipEl.classList.add('hidden');
+            hideTimer = 0;
+          }, 140);
         }
 
         function positionTooltip(target) {
@@ -197,12 +183,12 @@
     </script>
 
 </head>
-<body class="relative min-h-screen overflow-x-hidden bg-[#040712] text-slate-100 font-sans tracking-[0.01em] antialiased selection:bg-cyan-400/25 selection:text-white">
+<body class="relative min-h-screen overflow-x-hidden bg-canvas-950 text-slate-100 font-sans tracking-[0.01em] antialiased selection:bg-cyan-400/25 selection:text-white">
   <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,.14),transparent_28%),radial-gradient(circle_at_85%_12%,rgba(168,85,247,.16),transparent_24%),radial-gradient(circle_at_50%_110%,rgba(250,204,21,.08),transparent_26%),linear-gradient(135deg,#050816_0%,#070d1c_36%,#0a1022_100%)]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,.12),transparent_32%),radial-gradient(circle_at_82%_10%,rgba(217,70,239,.12),transparent_28%),radial-gradient(circle_at_50%_112%,rgba(251,191,36,.08),transparent_28%),linear-gradient(140deg,#050913_0%,#0b1323_44%,#111b30_100%)]"></div>
     <div class="absolute inset-0 bg-hud-grid bg-[length:42px_42px] opacity-[0.08]"></div>
-    <div class="absolute -left-24 top-16 h-72 w-72 rounded-full bg-cyan-400/16 blur-3xl"></div>
-    <div class="absolute right-[-3rem] top-28 h-80 w-80 rounded-full bg-violet-500/14 blur-3xl"></div>
+    <div class="absolute -left-24 top-16 h-72 w-72 rounded-full bg-cyan-400/15 blur-3xl"></div>
+    <div class="absolute right-[-3rem] top-28 h-80 w-80 rounded-full bg-fuchsia-500/11 blur-3xl"></div>
     <div class="absolute bottom-[-4rem] left-1/3 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl"></div>
     <div class="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-cyan-300/[0.03] to-transparent"></div>
   </div>
