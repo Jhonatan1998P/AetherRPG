@@ -14,6 +14,7 @@ import { createPersistenceModule } from '../state/persistence.js';
     SLOT_ORDER,
     ITEM_BASES,
     ITEM_ARCHETYPES,
+    ENEMY_ARCHETYPES,
     STAT_BUDGETS,
     AFFIXES,
     PETS,
@@ -64,6 +65,7 @@ import { createPersistenceModule } from '../state/persistence.js';
   } = createItemsDomain({
     ITEM_BASES,
     ITEM_ARCHETYPES,
+    ENEMY_ARCHETYPES,
     STAT_BUDGETS,
     AFFIXES,
     SLOT_ORDER,
@@ -182,6 +184,10 @@ import { createPersistenceModule } from '../state/persistence.js';
       state.player.itemPity = clone(defaults.player.itemPity);
     }
 
+    if (!state.combatDifficulty || typeof state.combatDifficulty !== 'object') {
+      state.combatDifficulty = clone(defaults.combatDifficulty);
+    }
+
     if (currentVersion < defaults.version) {
       state.version = defaults.version;
     }
@@ -206,6 +212,7 @@ import { createPersistenceModule } from '../state/persistence.js';
     if (!state.stats) state.stats = defaults.stats;
     if (!state.claimedAchievements) state.claimedAchievements = [];
     if (!state.combatHistory) state.combatHistory = [];
+    if (!state.combatDifficulty) state.combatDifficulty = defaults.combatDifficulty;
     if (!state.journal) state.journal = defaults.journal;
     if (!state.streak) state.streak = defaults.streak;
     if (!state.timers) state.timers = defaults.timers;
@@ -219,6 +226,14 @@ import { createPersistenceModule } from '../state/persistence.js';
     if (!state.ui.collapsedCardsByView || typeof state.ui.collapsedCardsByView !== 'object') {
       state.ui.collapsedCardsByView = {};
     }
+    state.combatDifficulty.adaptiveOffset = clamp(Number(state.combatDifficulty.adaptiveOffset || 0), -0.1, 0.1);
+    state.combatDifficulty.recentResults = Array.isArray(state.combatDifficulty.recentResults)
+      ? state.combatDifficulty.recentResults.slice(-12)
+      : [];
+    state.combatDifficulty.failStreak = Math.max(0, Number(state.combatDifficulty.failStreak || 0));
+    state.combatDifficulty.successStreak = Math.max(0, Number(state.combatDifficulty.successStreak || 0));
+    state.combatDifficulty.combatsSinceAdjust = Math.max(0, Number(state.combatDifficulty.combatsSinceAdjust || 0));
+    state.combatDifficulty.lastAdjustmentAt = state.combatDifficulty.lastAdjustmentAt || null;
     ensureUnlockedSkills();
     const ds = getDerivedStats();
     state.player.hp = clamp(state.player.hp || ds.maxHp, 1, ds.maxHp);

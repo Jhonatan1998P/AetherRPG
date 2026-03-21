@@ -27,12 +27,15 @@ const {
   getStoreMeta,
 } = window.AetherModel;
 
-const {
-  currentRank,
-  zoneForPlayer,
-  isZoneUnlocked,
-  summarizeReward,
-  achievementProgress,
+  const {
+    currentRank,
+    zoneForPlayer,
+    isZoneUnlocked,
+    threatBandForScore,
+    previewEncounter,
+    previewDungeonRoute,
+    summarizeReward,
+    achievementProgress,
   previewSalvage,
   previewCraftItem,
   previewEnhanceItem,
@@ -155,6 +158,9 @@ export const viewRuntime = {
   currentRank,
   zoneForPlayer,
   isZoneUnlocked,
+  threatBandForScore,
+  previewEncounter,
+  previewDungeonRoute,
   summarizeReward,
   achievementProgress,
   previewSalvage,

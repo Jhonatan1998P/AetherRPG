@@ -4,6 +4,7 @@ export function createItemsDomain(deps) {
   const {
     ITEM_BASES,
     ITEM_ARCHETYPES,
+    ENEMY_ARCHETYPES,
     STAT_BUDGETS,
     SLOT_ORDER,
     AFFIXES,
@@ -67,6 +68,12 @@ export function createItemsDomain(deps) {
     return weights[key] || 0.32;
   }
 
+  function enemySlotBias(archetypeId, slot) {
+    if (!archetypeId || !ENEMY_ARCHETYPES || !ENEMY_ARCHETYPES[archetypeId]) return 1;
+    const biasMap = ENEMY_ARCHETYPES[archetypeId].lootSlotBias || {};
+    return typeof biasMap[slot] === 'number' ? biasMap[slot] : 1;
+  }
+
   function budgetFor(slot, itemLevel, rarityKey) {
     const level = clamp(Math.round(itemLevel || 1), 1, 90);
     const slotBudgets = STAT_BUDGETS[slot] || {};
@@ -93,6 +100,7 @@ export function createItemsDomain(deps) {
     if (context.itemLevel) return Math.max(1, Math.round(context.itemLevel));
     const playerLevel = Math.max(1, Math.round(context.playerLevel || 1));
     const zoneDepth = Math.max(0, Math.round(context.zoneId || 0));
+    const threatScore = Number(context.threatScore || context.enemyThreat || 100);
     const sourceBonus = context.source === 'dungeon'
       ? 2
       : context.source === 'forge'
@@ -105,23 +113,44 @@ export function createItemsDomain(deps) {
       : context.enemyKind === 'elite'
         ? 2
         : 0;
-    return Math.max(1, playerLevel + zoneDepth + sourceBonus + enemyBonus + rand(-1, 2));
+    const threatBonus = clamp(Math.round((threatScore - 100) / 20), -2, 6);
+    const modeBonus = context.mode === 'event'
+      ? 1
+      : context.mode === 'dungeon'
+        ? 1
+        : 0;
+    return Math.max(1, playerLevel + zoneDepth + sourceBonus + enemyBonus + threatBonus + modeBonus + rand(-1, 2));
   }
 
   function chooseSmartSlot(context = {}) {
     if (context.slot && SLOT_ORDER.includes(context.slot)) return context.slot;
-    if (!context.smartLoot || !context.equipment) return pick(SLOT_ORDER);
+    const hasSmart = !!context.smartLoot && !!context.equipment;
+    const hasEnemyBias = !!(context.enemyArchetype && ENEMY_ARCHETYPES && ENEMY_ARCHETYPES[context.enemyArchetype]);
+    if (!hasSmart && !hasEnemyBias) return pick(SLOT_ORDER);
 
     const weights = SLOT_ORDER.map((slot) => {
+      const bias = enemySlotBias(context.enemyArchetype, slot);
+      if (!hasSmart) {
+        return {
+          slot,
+          weight: Math.max(0.1, bias),
+        };
+      }
+
       const equipped = context.equipment[slot];
       const baseWeight = 1;
-      if (!equipped) return { slot, weight: baseWeight + 1.9 };
+      if (!equipped) {
+        return {
+          slot,
+          weight: (baseWeight + 1.9) * bias,
+        };
+      }
       const equippedScore = equipped.score || computeItemScore(equipped);
       const target = (context.playerLevel || 1) * 56;
       const missing = Math.max(0, target - equippedScore);
       return {
         slot,
-        weight: baseWeight + Math.min(2.6, missing / Math.max(120, target)),
+        weight: (baseWeight + Math.min(2.6, missing / Math.max(120, target))) * bias,
       };
     });
 
@@ -149,7 +178,7 @@ export function createItemsDomain(deps) {
     };
   }
 
-  function nextPity(source, prevStreakData = {}, rarityKey) {
+  function nextPity(source, prevStreakData = {}, rarityKey, units = 1) {
     const next = {
       ...(prevStreakData || {}),
       bySource: {
@@ -160,12 +189,13 @@ export function createItemsDomain(deps) {
     const hasEpic = rarityOrder(rarityKey) >= rarityOrder('epic');
     const hasMythic = rarityOrder(rarityKey) >= rarityOrder('mythic');
     const hasAscendant = rarityKey === 'ascendant';
+    const pityUnits = clamp(Number(units || 1), 0.5, 2);
 
     const updated = {
-      epic: hasEpic ? 0 : (previousBySource.epic || 0) + 1,
-      mythic: hasMythic ? 0 : (previousBySource.mythic || 0) + 1,
-      ascendant: hasAscendant ? 0 : (previousBySource.ascendant || 0) + 1,
-      total: (previousBySource.total || 0) + 1,
+      epic: hasEpic ? 0 : softRound((previousBySource.epic || 0) + pityUnits, 3),
+      mythic: hasMythic ? 0 : softRound((previousBySource.mythic || 0) + pityUnits, 3),
+      ascendant: hasAscendant ? 0 : softRound((previousBySource.ascendant || 0) + pityUnits, 3),
+      total: softRound((previousBySource.total || 0) + pityUnits, 3),
       lastDropAt: now(),
       lastRarity: rarityKey,
     };
@@ -292,7 +322,12 @@ export function createItemsDomain(deps) {
     const source = context.source || 'arena';
     const slot = chooseSmartSlot(context);
     const itemLevel = resolveItemLevel(context);
+    const threatScore = Number(context.threatScore || context.enemyThreat || 100);
+    const threatFactor = clamp(1 + ((threatScore - 100) / 220), 0.84, 1.34);
     const luck = typeof context.lootLuck === 'number' ? context.lootLuck : getLootLuck();
+    const rarityBias = Number(context.rarityBias || 0);
+    const threatLuck = Math.max(0, (threatScore - 100) * 0.0018) + Math.max(0, rarityBias);
+    const effectiveLuck = luck + threatLuck;
     const sourcePity = pityFor(source, context.streakData || {});
     const pityTargets = SOURCE_PITY_TARGETS[source] || SOURCE_PITY_TARGETS.arena;
     const forcedFloor = sourcePity.mythic >= pityTargets.mythic
@@ -305,7 +340,7 @@ export function createItemsDomain(deps) {
       ? rarityDef(context.forcedRarity)
       : pickRarity(itemLevel, {
         source,
-        lootLuck: luck,
+        lootLuck: effectiveLuck,
         pity: sourcePity,
         ascension: context.ascension || 0,
       });
@@ -316,7 +351,7 @@ export function createItemsDomain(deps) {
     const qualityRoll = deriveQualityRoll(context);
     const archetype = ITEM_ARCHETYPES[slot] || {};
     const rawBudget = budgetFor(slot, itemLevel, rarity.key);
-    const powerBudget = Math.round(rawBudget * qualityRoll * (archetype.qualityBias || 1));
+    const powerBudget = Math.round(rawBudget * qualityRoll * (archetype.qualityBias || 1) * threatFactor);
 
     const stats = scaleBaseStats(base.stats, itemLevel, rarity);
     const basePoints = statBudgetPoints(stats);
@@ -344,6 +379,9 @@ export function createItemsDomain(deps) {
         source,
         zoneId: context.zoneId ?? null,
         enemyKind: context.enemyKind || null,
+        enemyArchetype: context.enemyArchetype || null,
+        enemyFamily: context.enemyFamily || null,
+        threatScoreAtDrop: threatScore,
         playerLevel: context.playerLevel || itemLevel,
         ascension: context.ascension || 0,
         createdAt: now(),
@@ -433,14 +471,21 @@ export function createItemsDomain(deps) {
     item.provenance = {
       ...(item.provenance || {}),
       source: 'starter',
+      enemyArchetype: null,
+      enemyFamily: null,
+      threatScoreAtDrop: null,
     };
     return finalizeItem(item);
   }
 
   function rollLoot(context = {}) {
     const source = context.source || 'arena';
+    const threatScore = Number(context.threatScore || context.enemyThreat || 100);
+    const pityUnits = typeof context.pityUnits === 'number'
+      ? clamp(context.pityUnits, 0.5, 2)
+      : clamp(threatScore / 100, 0.85, 1.35);
     const item = makeItemFromBudget(context);
-    const nextStreakData = nextPity(source, context.streakData || {}, item.rarity);
+    const nextStreakData = nextPity(source, context.streakData || {}, item.rarity, pityUnits);
     const sourcePity = pityFor(source, nextStreakData);
 
     return {
@@ -451,6 +496,7 @@ export function createItemsDomain(deps) {
         epic: sourcePity.epic,
         mythic: sourcePity.mythic,
         ascendant: sourcePity.ascendant,
+        units: pityUnits,
       },
       milestone: {
         epic: item.rarity === 'epic',
@@ -579,6 +625,11 @@ export function createItemsDomain(deps) {
         source: item.provenance && item.provenance.source ? item.provenance.source : (fallback.source || 'legacy'),
         zoneId: item.provenance && item.provenance.zoneId !== undefined ? item.provenance.zoneId : null,
         enemyKind: item.provenance && item.provenance.enemyKind ? item.provenance.enemyKind : null,
+        enemyArchetype: item.provenance && item.provenance.enemyArchetype ? item.provenance.enemyArchetype : null,
+        enemyFamily: item.provenance && item.provenance.enemyFamily ? item.provenance.enemyFamily : null,
+        threatScoreAtDrop: item.provenance && typeof item.provenance.threatScoreAtDrop === 'number'
+          ? item.provenance.threatScoreAtDrop
+          : null,
         playerLevel: item.provenance && item.provenance.playerLevel ? item.provenance.playerLevel : itemLevel,
         ascension: item.provenance && item.provenance.ascension ? item.provenance.ascension : 0,
         createdAt: item.provenance && item.provenance.createdAt ? item.provenance.createdAt : (item.createdAt || now()),

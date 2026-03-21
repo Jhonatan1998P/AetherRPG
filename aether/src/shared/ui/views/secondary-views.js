@@ -20,6 +20,9 @@ export function createSecondaryViews(deps) {
     rarityName,
     rarityBadge,
     zoneSelector,
+    threatBandForScore,
+    previewEncounter,
+    previewDungeonRoute,
     compareAgainstEquipped,
     itemStatGrid,
     durationChoiceCard,
@@ -88,6 +91,20 @@ export function createSecondaryViews(deps) {
 
   function renderMazmorra() {
     const hasKey = state.player.keys > 0;
+    const floor = state.player.highestDungeonFloor || 1;
+    const route = previewDungeonRoute(floor);
+    const threatSummary = route.length
+      ? `${route.map((entry) => `${entry.kind}: ${entry.threatLabel} ${Math.round(entry.threatScore)}`).join(' · ')}`
+      : 'Sin datos de amenaza';
+    const expectedReward = route.length
+      ? route.map((entry) => entry.rewardProfile && entry.rewardProfile.reward ? entry.rewardProfile.reward : null)
+        .filter(Boolean)
+        .reduce((acc, reward) => {
+          acc.gold += Number(reward.gold || 0);
+          acc.xp += Number(reward.xp || 0);
+          return acc;
+        }, { gold: 0, xp: 0 })
+      : { gold: 0, xp: 0 };
     return `
       <div class="space-y-5">
         ${pageLead('mazmorra', `Llaves: <b>${state.player.keys}</b> · Piso más alto: <b>${state.player.highestDungeonFloor}</b>`, [
@@ -104,16 +121,23 @@ export function createSecondaryViews(deps) {
           <section class="glass rounded-3xl p-5">
             ${sectionHeader('Contexto', 'Ruta de incursión', 'La mazmorra tiene un recorrido fijo por intento: entra solo cuando estés listo.')}
             <div class="grid gap-2 text-sm">
-              <div class="surface-subtle rounded-xl p-3 flex items-center justify-between"><span>1. Enemigo base</span>${statusChip('Entrada')}</div>
-              <div class="surface-subtle rounded-xl p-3 flex items-center justify-between"><span>2. Enemigo base</span>${statusChip('Presión')}</div>
-              <div class="surface-subtle rounded-xl p-3 flex items-center justify-between"><span>3. Enemigo élite</span>${statusChip('Riesgo', 'warning')}</div>
-              <div class="surface-subtle rounded-xl p-3 flex items-center justify-between"><span>4. Jefe del piso</span>${statusChip('Pico', 'danger')}</div>
+              ${route.map((entry, index) => `
+                <div class="surface-subtle rounded-xl p-3 flex items-center justify-between gap-2">
+                  <span>${index + 1}. ${entry.kind === 'boss' ? 'Jefe del piso' : entry.kind === 'elite' ? 'Enemigo elite' : 'Enemigo base'}</span>
+                  ${statusChip(`${entry.threatLabel} · ${Math.round(entry.threatScore)}`, entry.kind === 'boss' ? 'danger' : entry.kind === 'elite' ? 'warning' : '')}
+                </div>
+              `).join('')}
             </div>
 
             <div class="mt-4 grid sm:grid-cols-3 gap-3">
               ${htmlStat('Llaves', state.player.keys, hasKey ? 'Listo para entrar' : 'Necesitas conseguir llaves')}
               ${htmlStat('Piso récord', state.player.highestDungeonFloor, 'Tu tope actual')}
               ${htmlStat('Estado', hasKey ? 'Disponible' : 'Bloqueado', hasKey ? 'Tienes acceso inmediato' : 'Visita mercado o recompensas')}
+            </div>
+
+            <div class="mt-4 grid sm:grid-cols-2 gap-3">
+              ${infoCard('Amenaza prevista', threatSummary, 'surface-subtle')}
+              ${infoCard('Recompensa esperada', `~${fmt(expectedReward.gold)} oro · ~${fmt(expectedReward.xp)} XP por ruta completa`, 'surface-subtle')}
             </div>
           </section>
 

@@ -41,12 +41,13 @@ export function createDefaultsModule(deps) {
   function makeDefaultState() {
     const startedAt = Date.now();
     return {
-      version: 5,
+      version: 6,
       currentView: 'resumen',
       currentTab: 'resumen',
       featureFlags: {
         itemPipelineV2: true,
         itemTelemetryV2: true,
+        enemyPipelineV1: true,
       },
       ui: {
         inventoryFilter: 'all',
@@ -168,6 +169,24 @@ export function createDefaultsModule(deps) {
             epic: false,
             mythic: false,
           },
+          combat: {
+            samples: {
+              total: 0,
+              victories: 0,
+              defeats: 0,
+              turnsTotal: 0,
+              hpRatioTotal: 0,
+              potionsUsed: 0,
+            },
+            bySegment: {},
+            failStreakByZone: {},
+            threatToReward: [],
+            alerts: {
+              winrateDeviation: {},
+              overtunedBosses: {},
+              economyOutlier: null,
+            },
+          },
         },
       },
       quests: defaultQuests(1),
@@ -188,6 +207,14 @@ export function createDefaultsModule(deps) {
       streak: {
         lastClaimDay: null,
         days: 0,
+      },
+      combatDifficulty: {
+        adaptiveOffset: 0,
+        recentResults: [],
+        failStreak: 0,
+        successStreak: 0,
+        combatsSinceAdjust: 0,
+        lastAdjustmentAt: null,
       },
       combatHistory: [],
       lastTick: Date.now(),

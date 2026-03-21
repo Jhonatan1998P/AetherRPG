@@ -4,7 +4,23 @@ import { createActivitiesDomain } from '../../features/gameplay/domain/activitie
 import { createProgressionDomain } from '../../features/gameplay/domain/progression.js';
 
 (() => {
-  const { SLOT_ORDER, SLOT_NAMES, RANKS, ZONES, JOBS, PETS, SKILLS, ACHIEVEMENTS } = window.AetherConfig;
+  const {
+    SLOT_ORDER,
+    SLOT_NAMES,
+    RANKS,
+    ZONES,
+    JOBS,
+    PETS,
+    SKILLS,
+    ACHIEVEMENTS,
+    ENEMY_ARCHETYPES,
+    ENEMY_FAMILIES_BY_ZONE,
+    ENEMY_AFFIXES,
+    ENCOUNTER_TEMPLATES,
+    ENEMY_BUDGETS,
+    REWARD_CURVES,
+    THREAT_BANDS,
+  } = window.AetherConfig;
   const {
     $,
     clone,
@@ -48,7 +64,14 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
 
   const combatDomain = createCombatDomain({
     SKILLS,
-    SLOT_ORDER,
+    ZONES,
+    ENEMY_ARCHETYPES,
+    ENEMY_FAMILIES_BY_ZONE,
+    ENEMY_AFFIXES,
+    ENCOUNTER_TEMPLATES,
+    ENEMY_BUDGETS,
+    REWARD_CURVES,
+    THREAT_BANDS,
     pick,
     rand,
     randf,
@@ -75,6 +98,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   const activitiesDomain = createActivitiesDomain({
     JOBS,
     ZONES,
+    ENEMY_FAMILIES_BY_ZONE,
     clone,
     rand,
     rollLoot,
@@ -137,6 +161,35 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     if (!telemetry.milestonesShown || typeof telemetry.milestonesShown !== 'object') {
       telemetry.milestonesShown = { epic: false, mythic: false };
     }
+    if (!telemetry.combat || typeof telemetry.combat !== 'object') {
+      telemetry.combat = {};
+    }
+    if (!telemetry.combat.samples || typeof telemetry.combat.samples !== 'object') {
+      telemetry.combat.samples = {
+        total: 0,
+        victories: 0,
+        defeats: 0,
+        turnsTotal: 0,
+        hpRatioTotal: 0,
+        potionsUsed: 0,
+      };
+    }
+    if (!telemetry.combat.bySegment || typeof telemetry.combat.bySegment !== 'object') {
+      telemetry.combat.bySegment = {};
+    }
+    if (!telemetry.combat.failStreakByZone || typeof telemetry.combat.failStreakByZone !== 'object') {
+      telemetry.combat.failStreakByZone = {};
+    }
+    if (!Array.isArray(telemetry.combat.threatToReward)) {
+      telemetry.combat.threatToReward = [];
+    }
+    if (!telemetry.combat.alerts || typeof telemetry.combat.alerts !== 'object') {
+      telemetry.combat.alerts = {
+        winrateDeviation: {},
+        overtunedBosses: {},
+        economyOutlier: null,
+      };
+    }
     return telemetry;
   }
 
@@ -162,6 +215,140 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     const hour = telemetryHourKey(ts);
     telemetry.netGoldByHour[hour] = (telemetry.netGoldByHour[hour] || 0) + goldDelta;
     telemetry.netMaterialsByHour[hour] = (telemetry.netMaterialsByHour[hour] || 0) + materialDelta;
+  }
+
+  function currentHourNetGold() {
+    const telemetry = ensureTelemetryShape();
+    const hour = telemetryHourKey(Date.now());
+    return Number(telemetry.netGoldByHour[hour] || 0);
+  }
+
+  function economyTargetGoldPerHour() {
+    return Math.max(900, Math.round(1600 + state.player.level * 170 + (state.player.ascension || 0) * 280));
+  }
+
+  function threatLabelFromScore(score = 0) {
+    if (combatDomain.threatBandForScore) {
+      const band = combatDomain.threatBandForScore(score);
+      return band && band.label ? band.label : 'Media';
+    }
+    const fallback = (THREAT_BANDS || []).find((entry) => score >= entry.min && score < entry.max);
+    return fallback ? fallback.label : 'Media';
+  }
+
+  function combatSegmentKey(entry) {
+    return [
+      `z${entry.zoneId}`,
+      entry.kind || 'normal',
+      entry.archetype || 'unknown',
+      entry.family || 'unknown',
+    ].join('|');
+  }
+
+  function recordCombatTelemetry(payload = {}) {
+    const telemetry = ensureTelemetryShape();
+    const combat = telemetry.combat;
+    const summary = payload.summary || {};
+    const victory = !!payload.victory;
+    const zoneId = Number(payload.zoneId ?? 0);
+    const kind = payload.kind || 'normal';
+    const archetype = payload.archetype || 'unknown';
+    const family = payload.family || 'unknown';
+    const threatScore = Number(payload.threatScore || 0);
+    const rewards = payload.rewards || {};
+    const drop = payload.drop || null;
+    const rewardValue = Number(rewards.gold || 0)
+      + Number(rewards.xp || 0) * 0.6
+      + Number(rewards.essence || 0) * 20
+      + Number(rewards.sigils || 0) * 42
+      + Number(rewards.echoShards || 0) * 120;
+
+    combat.samples.total += 1;
+    if (victory) combat.samples.victories += 1;
+    else combat.samples.defeats += 1;
+    combat.samples.turnsTotal += Number(summary.turnsPlayed || 0);
+    if (typeof payload.playerHpRatio === 'number') combat.samples.hpRatioTotal += payload.playerHpRatio;
+    combat.samples.potionsUsed += Number(payload.potionsUsed || 0);
+
+    const segmentKey = combatSegmentKey({ zoneId, kind, archetype, family });
+    if (!combat.bySegment[segmentKey]) {
+      combat.bySegment[segmentKey] = {
+        zoneId,
+        kind,
+        archetype,
+        family,
+        fights: 0,
+        wins: 0,
+        losses: 0,
+        turnsTotal: 0,
+        hpRatioTotal: 0,
+        potionUsage: 0,
+        threatTotal: 0,
+        rewardGoldTotal: 0,
+        rewardValueTotal: 0,
+        dropRarity: {},
+      };
+    }
+
+    const segment = combat.bySegment[segmentKey];
+    segment.fights += 1;
+    if (victory) segment.wins += 1;
+    else segment.losses += 1;
+    segment.turnsTotal += Number(summary.turnsPlayed || 0);
+    segment.hpRatioTotal += Number(payload.playerHpRatio || 0);
+    segment.potionUsage += Number(payload.potionsUsed || 0);
+    segment.threatTotal += threatScore;
+    segment.rewardGoldTotal += Number(rewards.gold || 0);
+    segment.rewardValueTotal += rewardValue;
+
+    if (drop && drop.rarity) {
+      segment.dropRarity[drop.rarity] = (segment.dropRarity[drop.rarity] || 0) + 1;
+    }
+
+    const zoneKey = `z${zoneId}`;
+    const zoneFail = combat.failStreakByZone[zoneKey] || 0;
+    combat.failStreakByZone[zoneKey] = victory ? 0 : zoneFail + 1;
+
+    combat.threatToReward.push({
+      ts: Date.now(),
+      zoneId,
+      kind,
+      archetype,
+      family,
+      threatScore,
+      rewardGold: Number(rewards.gold || 0),
+      rewardValue,
+      dropRarity: drop && drop.rarity ? drop.rarity : null,
+    });
+    combat.threatToReward = combat.threatToReward.slice(-240);
+
+    const fights = segment.fights;
+    const winrate = fights > 0 ? segment.wins / fights : 0;
+    const target = kind === 'boss' ? 0.44 : kind === 'elite' ? 0.52 : 0.66;
+    if (fights >= 12 && Math.abs(winrate - target) > 0.08) {
+      combat.alerts.winrateDeviation[segmentKey] = {
+        winrate: softRound(winrate, 3),
+        target,
+        fights,
+      };
+    }
+
+    if (kind === 'boss' && fights >= 8 && (segment.losses / Math.max(1, fights)) > 0.7) {
+      combat.alerts.overtunedBosses[segmentKey] = {
+        lossRate: softRound(segment.losses / fights, 3),
+        fights,
+      };
+    }
+
+    const hourGold = currentHourNetGold();
+    const targetHour = economyTargetGoldPerHour();
+    if (hourGold > targetHour * 1.35) {
+      combat.alerts.economyOutlier = {
+        hour: telemetryHourKey(Date.now()),
+        gold: hourGold,
+        target: targetHour,
+      };
+    }
   }
 
   function recordItemTelemetry(item) {
@@ -266,6 +453,73 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     return result;
   }
 
+  function ensureCombatDifficultyState() {
+    if (!state.combatDifficulty || typeof state.combatDifficulty !== 'object') {
+      state.combatDifficulty = {
+        adaptiveOffset: 0,
+        recentResults: [],
+        failStreak: 0,
+        successStreak: 0,
+        combatsSinceAdjust: 0,
+        lastAdjustmentAt: null,
+      };
+    }
+    const difficulty = state.combatDifficulty;
+    difficulty.adaptiveOffset = clamp(Number(difficulty.adaptiveOffset || 0), -0.1, 0.1);
+    difficulty.recentResults = Array.isArray(difficulty.recentResults) ? difficulty.recentResults.slice(-12) : [];
+    difficulty.failStreak = Math.max(0, Number(difficulty.failStreak || 0));
+    difficulty.successStreak = Math.max(0, Number(difficulty.successStreak || 0));
+    difficulty.combatsSinceAdjust = Math.max(0, Number(difficulty.combatsSinceAdjust || 0));
+    difficulty.lastAdjustmentAt = difficulty.lastAdjustmentAt || null;
+    return difficulty;
+  }
+
+  function updateAdaptiveDifficulty(result = {}) {
+    const difficulty = ensureCombatDifficultyState();
+    const entry = {
+      victory: !!result.victory,
+      hpRatio: clamp(Number(result.playerHpRatio || 0), 0, 1),
+      threatScore: Number(result.threatScore || 100),
+      ts: Date.now(),
+    };
+    difficulty.recentResults.push(entry);
+    difficulty.recentResults = difficulty.recentResults.slice(-12);
+    difficulty.combatsSinceAdjust += 1;
+
+    if (entry.victory) {
+      difficulty.successStreak += 1;
+      difficulty.failStreak = 0;
+    } else {
+      difficulty.failStreak += 1;
+      difficulty.successStreak = 0;
+    }
+
+    if (difficulty.recentResults.length < 8 || difficulty.combatsSinceAdjust < 3) {
+      return difficulty.adaptiveOffset;
+    }
+
+    const total = difficulty.recentResults.length;
+    const wins = difficulty.recentResults.filter((sample) => sample.victory).length;
+    const winrate = wins / Math.max(1, total);
+    const avgHp = difficulty.recentResults.reduce((sumValue, sample) => sumValue + sample.hpRatio, 0) / Math.max(1, total);
+
+    let delta = 0;
+    if (winrate > 0.78 && avgHp > 0.62) {
+      delta = clamp((winrate - 0.78) * 0.12 + (avgHp - 0.62) * 0.08, 0.02, 0.06);
+    } else if (winrate < 0.42 || difficulty.failStreak >= 2) {
+      const lowWinPressure = Math.max(0, 0.42 - winrate);
+      const failPressure = difficulty.failStreak >= 2 ? 0.03 + Math.min(0.02, (difficulty.failStreak - 2) * 0.01) : 0;
+      delta = -clamp(lowWinPressure * 0.14 + failPressure, 0.03, 0.08);
+    }
+
+    if (Math.abs(delta) >= 0.012) {
+      difficulty.adaptiveOffset = clamp(difficulty.adaptiveOffset + delta, -0.1, 0.1);
+      difficulty.combatsSinceAdjust = 0;
+      difficulty.lastAdjustmentAt = Date.now();
+    }
+    return difficulty.adaptiveOffset;
+  }
+
   function offlineCatchup() {
     const now = Date.now();
     const elapsed = clamp((now - (state.lastTick || now)) / 1000, 0, 60 * 60 * 12);
@@ -298,25 +552,101 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     return combatDomain.enemyArchetypeMods(archetype);
   }
 
-  function difficultyMultiplier(zone, kind = 'normal') {
+  function difficultyMultiplier(zone, kind = 'normal', mode = 'arena') {
+    const difficulty = ensureCombatDifficultyState();
     return combatDomain.difficultyMultiplier({
       zone,
       kind,
+      mode,
       playerLevel: state.player.level || 1,
       playerAscension: state.player.ascension || 0,
       wins: state.stats && state.stats.wins ? state.stats.wins : 0,
+      adaptiveOffset: difficulty.adaptiveOffset,
     });
   }
 
-  function makeEnemy(zone, kind = 'normal', extraScale = 0) {
+  function makeEnemy(zone, kind = 'normal', extraScale = 0, mode = 'arena') {
+    const difficulty = ensureCombatDifficultyState();
     return combatDomain.makeEnemy({
       zone,
       kind,
+      mode,
       extraScale,
       playerLevel: state.player.level || 1,
       playerAscension: state.player.ascension || 0,
       wins: state.stats && state.stats.wins ? state.stats.wins : 0,
+      derivedStats: getDerivedStats(),
+      combatDifficulty: difficulty,
+      economyState: {
+        netGoldThisHour: currentHourNetGold(),
+        targetGoldPerHour: economyTargetGoldPerHour(),
+      },
     });
+  }
+
+  function previewEncounter(kind = 'normal', mode = 'arena', options = {}) {
+    const zone = options.zone || zoneForPlayer();
+    const difficulty = ensureCombatDifficultyState();
+    const enemy = combatDomain.rollEncounter({
+      mode,
+      zone,
+      zoneId: zone.id,
+      kind,
+      extraScale: options.extraScale || 0,
+      playerLevel: state.player.level || 1,
+      playerAscension: state.player.ascension || 0,
+      wins: state.stats && state.stats.wins ? state.stats.wins : 0,
+      derivedStats: getDerivedStats(),
+      adaptiveOffset: difficulty.adaptiveOffset,
+      economyState: {
+        netGoldThisHour: currentHourNetGold(),
+        targetGoldPerHour: economyTargetGoldPerHour(),
+      },
+      preview: true,
+      enemyFamily: options.enemyFamily,
+      enemyArchetype: options.enemyArchetype,
+    });
+    const rewardProfile = combatDomain.computeEnemyRewardProfile({
+      mode,
+      kind,
+      zoneId: zone.id,
+      playerLevel: state.player.level,
+      ascension: state.player.ascension || 0,
+      enemy,
+      threatScore: enemy.threatScore,
+      threatRatio: (enemy.threatScore || 100) / 100,
+      economyState: {
+        netGoldThisHour: currentHourNetGold(),
+        targetGoldPerHour: economyTargetGoldPerHour(),
+      },
+      preview: true,
+    }, { victory: true });
+
+    return {
+      kind,
+      mode,
+      enemy,
+      threatScore: enemy.threatScore,
+      threatLabel: enemy.threatBand || threatLabelFromScore(enemy.threatScore),
+      rewardProfile,
+      rewardText: summarizeReward(rewardProfile.reward),
+    };
+  }
+
+  function previewDungeonRoute(floor = state.player.highestDungeonFloor || 1) {
+    const zone = ZONES[Math.min(ZONES.length - 1, Math.floor((Math.max(1, floor) - 1) / 2))] || zoneForPlayer();
+    return [
+      previewEncounter('normal', 'dungeon', { zone, extraScale: floor * 0.78 }),
+      previewEncounter('normal', 'dungeon', { zone, extraScale: floor * 0.84 }),
+      previewEncounter('elite', 'dungeon', { zone, extraScale: floor * 0.92 }),
+      previewEncounter('boss', 'dungeon', { zone, extraScale: floor * 1.02 }),
+    ];
+  }
+
+  function threatBandForScore(score = 0) {
+    const band = combatDomain.threatBandForScore ? combatDomain.threatBandForScore(score) : null;
+    if (band && band.label) return band.label;
+    return threatLabelFromScore(score);
   }
 
   function buildPlayerCombatant() {
@@ -381,11 +711,39 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function runCombat(enemy, context = { mode: 'arena' }) {
+    const mode = context.mode || 'arena';
+    const zone = ZONES[enemy.zoneId] || zoneForPlayer();
+    const derivedStats = getDerivedStats();
+    const playerPower = combatDomain.expectedPlayerPower({
+      level: state.player.level || 1,
+      ascension: state.player.ascension || 0,
+      zoneId: zone.id,
+      derivedStats,
+    });
+
+    if (!enemy.threatScore || enemy.threatScore <= 0) {
+      enemy.threatScore = combatDomain.computeThreatScore(enemy, {
+        level: state.player.level || 1,
+        ascension: state.player.ascension || 0,
+        attack: derivedStats.attack,
+        defense: derivedStats.defense,
+        speed: derivedStats.speed,
+        maxHp: derivedStats.maxHp,
+        crit: derivedStats.crit,
+        dodge: derivedStats.dodge,
+        block: derivedStats.block,
+        lifesteal: derivedStats.lifesteal,
+      });
+    }
+    enemy.threatBand = enemy.threatBand || threatLabelFromScore(enemy.threatScore);
+    enemy.playerPower = enemy.playerPower || playerPower;
+
+    const potionsBefore = state.player.potions || 0;
     const simulation = combatDomain.runCombat({
       enemy,
       playerState: state.player,
-      derivedStats: getDerivedStats(),
-      zoneName: (ZONES[enemy.zoneId] && ZONES[enemy.zoneId].name) || 'Zona desconocida',
+      derivedStats,
+      zoneName: zone.name || 'Zona desconocida',
       maxTurns: 28,
     });
 
@@ -396,32 +754,63 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     state.player.hp = clamp(player.hp, 1, getDerivedStats().maxHp);
 
     const rewards = { gold: 0, xp: 0, iron: 0, wood: 0, essence: 0, sigils: 0, echoShards: 0, keys: 0, potions: 0 };
+    let rewardProfile = combatDomain.computeEnemyRewardProfile({
+      mode,
+      kind: foe.kind,
+      zoneId: zone.id,
+      playerLevel: state.player.level,
+      ascension: state.player.ascension || 0,
+      enemy: foe,
+      threatScore: foe.threatScore,
+      threatRatio: (foe.threatScore || 100) / 100,
+      economyState: {
+        netGoldThisHour: currentHourNetGold(),
+        targetGoldPerHour: economyTargetGoldPerHour(),
+      },
+    }, { victory });
     let drop = null;
 
     if (victory) {
-      const zone = ZONES[foe.zoneId];
-      const goldBase = rand(30, 54) + foe.level * 12 + (foe.kind === 'elite' ? 45 : foe.kind === 'boss' ? 70 : 0);
-      const xpBase = rand(22, 38) + foe.level * 10 + (foe.kind === 'boss' ? 55 : 0);
-      rewards.gold = Math.round(goldBase * (1 + getDerivedStats().goldPct));
-      rewards.xp = Math.round(xpBase);
-      rewards.iron = rand(0, 2 + zone.id);
-      rewards.wood = rand(0, 1 + Math.floor(zone.id / 2));
-      rewards.essence = Math.random() < 0.32 + zone.id * 0.02 ? rand(1, 2 + Math.floor(zone.id / 2)) : 0;
-      rewards.sigils = zone.id >= 3 && Math.random() < 0.11 + zone.id * 0.01 ? 1 + Math.floor(zone.id / 3) : 0;
-      rewards.echoShards = zone.id >= 5 && (foe.kind === 'elite' || foe.kind === 'boss') && Math.random() < 0.08 + zone.id * 0.01 ? 1 : 0;
-      rewards.keys = context.mode === 'dungeon' && Math.random() < 0.13 ? 1 : 0;
-      rewards.potions = Math.random() < 0.08 ? 1 : 0;
+      rewardProfile = combatDomain.computeEnemyRewardProfile({
+        mode,
+        kind: foe.kind,
+        zoneId: zone.id,
+        playerLevel: state.player.level,
+        ascension: state.player.ascension || 0,
+        enemy: foe,
+        threatScore: foe.threatScore,
+        threatRatio: (foe.threatScore || 100) / 100,
+        economyState: {
+          netGoldThisHour: currentHourNetGold(),
+          targetGoldPerHour: economyTargetGoldPerHour(),
+        },
+      }, { victory: true });
 
-      const source = context.mode === 'dungeon' ? 'dungeon' : 'arena';
-      const dropChance = 0.26 + getLootLuck() * 0.68 + (foe.kind === 'elite' ? 0.1 : 0) + (foe.kind === 'boss' ? 0.16 : 0) + (context.mode === 'dungeon' ? 0.1 : 0);
+      Object.assign(rewards, rewardProfile.reward || {});
+      rewards.gold = Math.round((rewards.gold || 0) * (1 + derivedStats.goldPct));
+
+      const source = mode === 'dungeon' ? 'dungeon' : mode === 'event' ? 'expedition' : 'arena';
+      const dropChance = clamp(
+        clamp((rewardProfile.dropProfile && rewardProfile.dropProfile.chance) || 0, 0.1, 0.92)
+        + getLootLuck() * 0.5,
+        0.08,
+        0.96,
+      );
       if (Math.random() < dropChance) {
         const rolled = rollLoot({
           source,
           zoneId: zone.id,
           enemyKind: foe.kind,
+          enemyArchetype: foe.archetype || foe.enemyArchetype,
+          enemyFamily: foe.family || foe.enemyFamily,
+          threatScore: foe.threatScore,
+          rarityBias: rewardProfile.dropProfile && rewardProfile.dropProfile.rarityBias,
+          minRarity: rewardProfile.dropProfile && rewardProfile.dropProfile.minRarity,
+          pityUnits: rewardProfile.dropProfile && rewardProfile.dropProfile.pityUnits,
           playerLevel: state.player.level,
           ascension: state.player.ascension || 0,
-          itemLevel: foe.level + rand(0, 2),
+          itemLevel: foe.level + Number((rewardProfile.dropProfile && rewardProfile.dropProfile.itemLevelBonus) || 0) + rand(0, 2),
+          mode,
           lootLuck: getLootLuck(),
           smartLoot: true,
           equipment: state.player.equipment,
@@ -432,30 +821,62 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
         acquireItem(drop);
       }
 
-      grantRewards(rewards, `Botín de ${foe.name}`);
+      grantRewards(rewards, `Botin de ${foe.name}`);
       state.stats.kills += 1;
-      if (context.mode === 'arena') state.stats.wins += 1;
-      if (context.mode === 'dungeon') state.stats.dungeons += 1;
+      if (mode === 'arena') state.stats.wins += 1;
+      if (mode === 'dungeon') state.stats.dungeons += 1;
       if (foe.kind === 'elite') state.stats.elites += 1;
       if (foe.kind === 'boss') state.player.highestDungeonFloor = Math.max(state.player.highestDungeonFloor, context.floor || state.player.highestDungeonFloor);
       trackQuest('kills', 1);
-      if (context.mode === 'arena') trackQuest('wins', 1);
-      if (context.mode === 'dungeon') trackQuest('dungeons', 1);
+      if (mode === 'arena') trackQuest('wins', 1);
+      if (mode === 'dungeon') trackQuest('dungeons', 1);
       if (foe.kind === 'elite') trackQuest('elites', 1);
-      addJournal('⚔️', `Victoria contra <b>${foe.name}</b>. ${summarizeReward(rewards)}${drop ? ` · Botín: <span class="rarity-${drop.rarity}">${drop.name}</span>` : ''}`);
-      toast(`Victoria sobre ${foe.name}`, 'success');
+      addJournal('⚔️', `Victoria contra <b>${foe.name}</b> (${foe.threatBand} ${Math.round(foe.threatScore)}). ${summarizeReward(rewards)}${drop ? ` · Botin: <span class="rarity-${drop.rarity}">${drop.name}</span>` : ''}`);
+      toast(`Victoria sobre ${foe.name} · amenaza ${foe.threatBand}`, 'success');
     } else {
-      if (context.mode === 'arena') state.stats.losses += 1;
+      if (mode === 'arena') state.stats.losses += 1;
       const beforeGold = state.player.gold;
-      const goldLoss = rand(10, 25);
+      const goldLoss = Math.round(rand(10, 25) * clamp((foe.threatScore || 100) / 110, 0.85, 1.35));
       state.player.gold = Math.max(0, state.player.gold - goldLoss);
       recordEconomyDelta((state.player.gold || 0) - (beforeGold || 0), 0);
-      addJournal('💀', `Has sido derrotado por <b>${foe.name}</b>. La multitud te abuchea.`);
+      const causeLabel = {
+        desgaste_dot: 'derrota por dano persistente',
+        burst_inicial: 'derrota por burst inicial',
+        falta_de_dano: 'tu dano no alcanzo el umbral del encuentro',
+        muro_defensivo: 'el enemigo aguanto demasiado',
+        presion_sostenida: 'presion sostenida del rival',
+      }[summary.defeatCause] || 'la presion enemiga te supero';
+      addJournal('💀', `Has sido derrotado por <b>${foe.name}</b>. Causa: ${causeLabel}.`);
       toast(`Derrota contra ${foe.name}`, 'danger');
     }
 
+    const playerHpRatio = derivedStats.maxHp > 0 ? clamp(state.player.hp / derivedStats.maxHp, 0, 1) : 0;
+    updateAdaptiveDifficulty({
+      victory,
+      playerHpRatio,
+      threatScore: foe.threatScore,
+    });
+
     state.player.title = currentRank().title;
     checkAchievements();
+
+    const potionsUsed = Math.max(0, (potionsBefore || 0) - (state.player.potions || 0));
+    recordCombatTelemetry({
+      victory,
+      summary,
+      zoneId: foe.zoneId,
+      kind: foe.kind,
+      archetype: foe.archetype || foe.enemyArchetype,
+      family: foe.family || foe.enemyFamily,
+      threatScore: foe.threatScore,
+      rewards,
+      drop,
+      playerHpRatio,
+      potionsUsed,
+    });
+
+    const enemyThreatPower = Math.round((foe.threatBudget || foe.playerPower || playerPower) * ((foe.threatScore || 100) / 100));
+    const powerRatio = playerPower > 0 ? enemyThreatPower / playerPower : 1;
 
     state.combatHistory.unshift({
       id: uid(),
@@ -473,10 +894,40 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
         playerSkillCasts: statsDelta.playerSkillCasts,
         playerBasicAttacks: statsDelta.playerBasicAttacks,
       },
+      enemyMeta: {
+        kind: foe.kind,
+        archetype: foe.archetype || foe.enemyArchetype,
+        family: foe.family || foe.enemyFamily,
+        aiProfile: foe.aiProfile || null,
+        affixes: foe.affixes || [],
+      },
+      threat: {
+        score: foe.threatScore,
+        label: foe.threatBand,
+        playerPower,
+        enemyThreatPower,
+        ratio: softRound(powerRatio, 3),
+      },
+      rewardProfile: {
+        riskFactor: rewardProfile.riskFactor,
+        challengeFactor: rewardProfile.challengeFactor,
+        economyGuard: rewardProfile.economyGuard,
+      },
       rewards,
       drop,
     });
     state.combatHistory = state.combatHistory.slice(0, 15);
+
+    const affixText = Array.isArray(foe.affixes) && foe.affixes.length ? foe.affixes.join(', ') : 'Sin modificadores';
+    const defeatReasonText = summary.defeatCause
+      ? ({
+        desgaste_dot: 'Derrota por dano persistente.',
+        burst_inicial: 'Derrota por burst inicial.',
+        falta_de_dano: 'No alcanzaste el umbral de dano requerido.',
+        muro_defensivo: 'El enemigo supero tu presion ofensiva.',
+        presion_sostenida: 'La presion enemiga fue constante.',
+      }[summary.defeatCause] || 'Sin causa precisa.')
+      : 'Sin derrota.';
 
     state.ui.modal = {
       type: 'combat',
@@ -487,15 +938,15 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
             <div class="glass rounded-2xl p-4">
               <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Resultado</div>
               <div class="text-xl font-black ${victory ? 'text-emerald-300' : 'text-rose-300'}">${victory ? 'Has ganado' : 'Has perdido'}</div>
-              <div class="text-sm text-slate-300/75 mt-1">${summarizeReward(rewards)}${drop ? ` · Botín: <span class="rarity-${drop.rarity}">${drop.name}</span>` : ''}</div>
+              <div class="text-sm text-slate-300/75 mt-1">${summarizeReward(rewards)}${drop ? ` · Botin: <span class="rarity-${drop.rarity}">${drop.name}</span>` : ''}</div>
             </div>
             <div class="glass rounded-2xl p-4">
               <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Estado final</div>
               <div class="text-lg font-black text-white">${fmt(state.player.hp)} HP restantes</div>
-              <div class="text-sm text-slate-300/75 mt-1">${foe.name} ${victory ? 'cayó derrotado' : 'sobrevivió al duelo'}.</div>
+              <div class="text-sm text-slate-300/75 mt-1">${foe.name} ${victory ? 'cayo derrotado' : 'sobrevivio al duelo'}.</div>
             </div>
           </div>
-          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div class="glass rounded-2xl p-4">
               <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Ritmo</div>
               <div class="text-lg font-black text-white">${summary.turnsPlayed} turnos</div>
@@ -511,6 +962,21 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
               <div class="text-sm text-slate-100/90">Habilidades: <b>${fmt(statsDelta.playerSkillCasts)}</b></div>
               <div class="text-sm text-slate-100/90">Golpes básicos: <b>${fmt(statsDelta.playerBasicAttacks)}</b></div>
               <div class="text-sm text-slate-100/90">Críticos: <b>${fmt(statsDelta.crits)}</b></div>
+            </div>
+            <div class="glass rounded-2xl p-4">
+              <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Amenaza</div>
+              <div class="text-sm text-slate-100/90">${foe.threatBand} · <b>${fmt(foe.threatScore, 1)}</b></div>
+              <div class="text-xs text-slate-300/70 mt-1">Poder: jugador <b>${fmt(playerPower)}</b> vs enemigo <b>${fmt(enemyThreatPower)}</b> (${fmt(powerRatio * 100, 1)}%).</div>
+            </div>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">
+              <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Modificadores activos</div>
+              <div>${affixText}</div>
+            </div>
+            <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">
+              <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Causa de derrota</div>
+              <div>${victory ? 'No aplica (combate ganado).' : defeatReasonText}</div>
             </div>
           </div>
           <div class="glass rounded-2xl p-4 max-h-[55vh] overflow-auto">
@@ -803,7 +1269,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     }
     state.player.stamina -= staminaCost;
     state.player.energy -= zone.energyCost;
-    const enemy = makeEnemy(zone, kind);
+    const enemy = makeEnemy(zone, kind, 0, 'arena');
     runCombat(enemy, { mode: 'arena' });
   }
 
@@ -814,7 +1280,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       if (state.player.stamina < zone.staminaCost || state.player.energy < zone.energyCost || state.player.hp < getDerivedStats().maxHp * 0.2) break;
       state.player.stamina -= zone.staminaCost;
       state.player.energy -= zone.energyCost;
-      const enemy = makeEnemy(zone, 'normal', i);
+      const enemy = makeEnemy(zone, 'normal', i, 'arena');
       runCombat(enemy, { mode: 'arena' });
       const entry = state.combatHistory[0];
       summaries.push(`${entry.result === 'victory' ? '✅' : '❌'} ${entry.title}`);
@@ -846,10 +1312,10 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     const logLines = [];
     let success = true;
     const enemies = [
-      makeEnemy(zone, 'normal', floor * 0.8),
-      makeEnemy(zone, 'normal', floor * 0.85),
-      makeEnemy(zone, 'elite', floor * 0.9),
-      makeEnemy(zone, 'boss', floor),
+      makeEnemy(zone, 'normal', floor * 0.8, 'dungeon'),
+      makeEnemy(zone, 'normal', floor * 0.85, 'dungeon'),
+      makeEnemy(zone, 'elite', floor * 0.9, 'dungeon'),
+      makeEnemy(zone, 'boss', floor, 'dungeon'),
     ];
 
     enemies.forEach((enemy, index) => {
@@ -1052,10 +1518,10 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     const value = bySource[source] || pity;
     return {
       source,
-      epic: value.epic || 0,
-      mythic: value.mythic || 0,
-      ascendant: value.ascendant || 0,
-      total: value.total || 0,
+      epic: softRound(value.epic || 0, 1),
+      mythic: softRound(value.mythic || 0, 1),
+      ascendant: softRound(value.ascendant || 0, 1),
+      total: softRound(value.total || 0, 1),
     };
   }
 
@@ -1072,7 +1538,11 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     isZoneUnlocked,
     setZone,
     enemyArchetypeMods,
+    difficultyMultiplier,
     makeEnemy,
+    previewEncounter,
+    previewDungeonRoute,
+    threatBandForScore,
     buildPlayerCombatant,
     activeBuffValue,
     effectiveStat,

@@ -2,11 +2,40 @@ export function createActivitiesDomain(deps) {
   const {
     JOBS,
     ZONES,
+    ENEMY_FAMILIES_BY_ZONE,
     clone,
     rand,
     rollLoot,
     clamp,
   } = deps;
+
+  function weightedPick(entries = []) {
+    const clean = entries.filter((entry) => entry && Number(entry.weight || 0) > 0);
+    if (!clean.length) return null;
+    const total = clean.reduce((sumValue, entry) => sumValue + Number(entry.weight || 0), 0);
+    let roll = Math.random() * total;
+    for (let i = 0; i < clean.length; i += 1) {
+      roll -= Number(clean[i].weight || 0);
+      if (roll <= 0) return clean[i].value;
+    }
+    return clean[clean.length - 1].value;
+  }
+
+  function expeditionEnemyContext(zoneId = 0) {
+    const families = ENEMY_FAMILIES_BY_ZONE && ENEMY_FAMILIES_BY_ZONE[zoneId];
+    if (!Array.isArray(families) || !families.length) {
+      return {
+        enemyFamily: null,
+        enemyArchetype: null,
+      };
+    }
+    const family = weightedPick(families.map((entry) => ({ value: entry, weight: entry.weight || 1 }))) || families[0];
+    const archetypeEntries = Object.entries((family && family.archetypeWeights) || {}).map(([value, weight]) => ({ value, weight }));
+    return {
+      enemyFamily: family.id || null,
+      enemyArchetype: archetypeEntries.length ? (weightedPick(archetypeEntries) || archetypeEntries[0].value) : null,
+    };
+  }
 
   function passiveRegen(state, seconds, getDerivedStats) {
     const ds = getDerivedStats();
@@ -93,15 +122,25 @@ export function createActivitiesDomain(deps) {
     state.stats.expeditions += 1;
     trackQuest('expeditions', 1);
 
+    const threatScore = Math.max(70, Math.round(94 + zone.id * 10 + exp.durationSec * 0.28 + rand(-6, 8)));
+    const enemyContext = expeditionEnemyContext(zone.id);
+    const enemyKind = exp.durationSec >= 120 ? 'elite' : 'normal';
     const dropChance = 0.48 + zone.id * 0.04 + Math.min(0.2, (getLootLuck ? getLootLuck() : 0) * 0.5);
     if (Math.random() < dropChance) {
       const rolled = rollLoot({
         source: 'expedition',
         zoneId: zone.id,
+        enemyKind,
+        enemyArchetype: enemyContext.enemyArchetype,
+        enemyFamily: enemyContext.enemyFamily,
+        threatScore,
+        rarityBias: Math.max(0, (threatScore - 100) * 0.0012),
+        pityUnits: clamp(threatScore / 100, 0.85, 1.3),
         playerLevel: state.player.level,
         itemLevel: state.player.level + zone.id + rand(0, 2),
         ascension: state.player.ascension || 0,
         lootLuck: getLootLuck ? getLootLuck() : 0,
+        mode: 'event',
         smartLoot: true,
         equipment: state.player.equipment,
         streakData: state.player.itemPity,

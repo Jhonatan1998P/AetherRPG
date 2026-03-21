@@ -383,6 +383,18 @@ import { AetherViewContent } from './views-content.js';
       player_defeated: 'Caída del jugador',
       turn_limit: 'Límite de turnos',
     }[summary.endReason] || 'Sin dato';
+    const threat = entry.threat || {};
+    const enemyMeta = entry.enemyMeta || {};
+    const modifiers = Array.isArray(enemyMeta.affixes) && enemyMeta.affixes.length
+      ? enemyMeta.affixes.join(', ')
+      : 'Sin modificadores';
+    const defeatCause = {
+      desgaste_dot: 'Daño persistente acumulado.',
+      burst_inicial: 'Burst inicial del enemigo.',
+      falta_de_dano: 'No alcanzaste el umbral de daño necesario.',
+      muro_defensivo: 'El enemigo sostuvo demasiada defensa.',
+      presion_sostenida: 'Presión sostenida en varios turnos.',
+    }[summary.defeatCause] || 'Sin causa registrada';
     mutate('ui/showCombat', () => {
       state.ui.modal = {
         type: 'combat',
@@ -400,10 +412,23 @@ import { AetherViewContent } from './views-content.js';
                 <div class="text-xs text-slate-300/70 mt-1">${sanitizeInlineHtml(endReason)}</div>
               </div>
             </div>
-            <div class="grid sm:grid-cols-3 gap-3">
+            <div class="grid sm:grid-cols-4 gap-3">
               <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">Daño infligido: <b>${Number(stats.damageDone || 0)}</b></div>
               <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">Daño recibido: <b>${Number(stats.damageTaken || 0)}</b></div>
               <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">Críticos: <b>${Number(stats.crits || 0)}</b></div>
+              <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">Amenaza: <b>${threat.score ? Math.round(threat.score) : 'N/D'}</b> ${threat.label ? `(${sanitizeInlineHtml(threat.label)})` : ''}</div>
+            </div>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">
+                <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Comparativa de poder</div>
+                <div>Jugador: <b>${Math.round(Number(threat.playerPower || 0))}</b> · Enemigo: <b>${Math.round(Number(threat.enemyThreatPower || 0))}</b></div>
+                <div class="text-xs text-slate-300/70 mt-1">Relación: ${threat.ratio ? `${Math.round(Number(threat.ratio) * 100)}%` : 'sin dato'}</div>
+              </div>
+              <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">
+                <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Modificadores y causa</div>
+                <div class="text-slate-200/90">${sanitizeInlineHtml(modifiers)}</div>
+                <div class="text-xs text-slate-300/70 mt-1">${entry.result === 'defeat' ? sanitizeInlineHtml(defeatCause) : 'No aplica (combate ganado).'}</div>
+              </div>
             </div>
             <div class="glass rounded-2xl p-4 max-h-[55vh] overflow-auto">
               <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-3">Registro turno a turno</div>

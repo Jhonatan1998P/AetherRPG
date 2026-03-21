@@ -290,6 +290,413 @@ export const AFFIXES = [
   { suffix: 'del Eclipse', stats: { attack: 3, speed: 1, crit: 0.01 } },
 ];
 
+export const ENEMY_ARCHETYPES = {
+  berserker: {
+    id: 'berserker',
+    name: 'Berserker',
+    aiProfile: 'aggressive',
+    statWeights: { attack: 1.34, defense: 0.86, speed: 1.02, hp: 1.02, crit: 0.94, dodge: 0.56, block: 0.2, lifesteal: 0.62 },
+    baseModifiers: { attack: 1.12, defense: 0.92, speed: 1.03, crit: 0.04, dodge: 0.01, block: 0.0, lifesteal: 0.02 },
+    lootSlotBias: { weapon: 1.32, gloves: 1.18, ring: 1.16, chest: 0.9, offhand: 0.86, helm: 0.9, boots: 0.96, amulet: 0.9 },
+    skills: [
+      { id: 'frenesi', name: 'Frenesi de arena', mult: 1.42, cooldown: 3, critBonus: 0.09 },
+      { id: 'corte_sangriento', name: 'Corte sangriento', mult: 1.12, cooldown: 4, dot: { turns: 2, ratio: 0.13, label: 'Hemorragia' } },
+      { id: 'embestida_brutal', name: 'Embestida brutal', mult: 1.24, cooldown: 5, armorBreak: { pct: 0.12, turns: 2 } },
+    ],
+  },
+  guardian: {
+    id: 'guardian',
+    name: 'Guardian',
+    aiProfile: 'sustain',
+    statWeights: { attack: 0.9, defense: 1.26, speed: 0.9, hp: 1.24, crit: 0.32, dodge: 0.36, block: 0.96, lifesteal: 0.32 },
+    baseModifiers: { attack: 0.9, defense: 1.18, speed: 0.92, crit: 0.01, dodge: 0.02, block: 0.05, lifesteal: 0.0 },
+    lootSlotBias: { weapon: 0.86, gloves: 0.92, ring: 0.9, chest: 1.28, offhand: 1.3, helm: 1.18, boots: 0.9, amulet: 1.04 },
+    skills: [
+      { id: 'muro_carne', name: 'Muro de carne', mult: 0.9, cooldown: 4, selfBuff: { defensePct: 0.2, turns: 2, shieldPct: 0.1 } },
+      { id: 'martillo_escudo', name: 'Martillo de escudo', mult: 1.05, cooldown: 4, armorBreak: { pct: 0.15, turns: 2 } },
+      { id: 'juramento_hierro', name: 'Juramento de hierro', mult: 0.96, cooldown: 5, selfBuff: { defensePct: 0.14, speedPct: -0.04, turns: 3 } },
+    ],
+  },
+  assassin: {
+    id: 'assassin',
+    name: 'Asesino',
+    aiProfile: 'execution',
+    statWeights: { attack: 1.02, defense: 0.78, speed: 1.28, hp: 0.86, crit: 1.08, dodge: 1.02, block: 0.3, lifesteal: 0.18 },
+    baseModifiers: { attack: 1.0, defense: 0.86, speed: 1.22, crit: 0.06, dodge: 0.05, block: 0.01, lifesteal: 0.0 },
+    lootSlotBias: { weapon: 1.2, gloves: 1.02, ring: 1.26, chest: 0.82, offhand: 0.86, helm: 0.86, boots: 1.2, amulet: 0.96 },
+    skills: [
+      { id: 'deguello', name: 'Deguello', mult: 1.18, cooldown: 3, critBonus: 0.2 },
+      { id: 'marca_caza', name: 'Marca de caza', mult: 1.02, cooldown: 4, armorBreak: { pct: 0.12, turns: 2 } },
+      { id: 'veredicto_final', name: 'Veredicto final', mult: 1.2, cooldown: 4, executeThreshold: 0.38, executeMult: 1.9 },
+    ],
+  },
+  beast: {
+    id: 'beast',
+    name: 'Bestia',
+    aiProfile: 'aggressive',
+    statWeights: { attack: 1.08, defense: 0.92, speed: 1.08, hp: 1.14, crit: 0.58, dodge: 0.74, block: 0.22, lifesteal: 0.72 },
+    baseModifiers: { attack: 1.08, defense: 0.95, speed: 1.09, crit: 0.03, dodge: 0.03, block: 0.0, lifesteal: 0.03 },
+    lootSlotBias: { weapon: 1.16, gloves: 1.08, ring: 1.06, chest: 1.04, offhand: 0.9, helm: 0.94, boots: 1.12, amulet: 1.02 },
+    skills: [
+      { id: 'desgarro', name: 'Desgarro', mult: 1.08, cooldown: 3, dot: { turns: 2, ratio: 0.12, label: 'Sangrado' } },
+      { id: 'zarpazo_doble', name: 'Zarpazo doble', mult: 0.86, cooldown: 4, hits: 2 },
+      { id: 'aullido_predador', name: 'Aullido depredador', mult: 1.06, cooldown: 5, selfBuff: { attackPct: 0.16, speedPct: 0.08, turns: 2 } },
+    ],
+  },
+  occult: {
+    id: 'occult',
+    name: 'Oculto',
+    aiProfile: 'control',
+    statWeights: { attack: 1.0, defense: 0.94, speed: 1.04, hp: 1.0, crit: 0.82, dodge: 0.64, block: 0.46, lifesteal: 0.26 },
+    baseModifiers: { attack: 1.03, defense: 0.94, speed: 1.05, crit: 0.05, dodge: 0.02, block: 0.02, lifesteal: 0.0 },
+    lootSlotBias: { weapon: 1.04, gloves: 0.96, ring: 1.08, chest: 0.96, offhand: 1.06, helm: 1.02, boots: 1.04, amulet: 1.16 },
+    skills: [
+      { id: 'maldicion', name: 'Maldicion', mult: 1.15, cooldown: 4, armorBreak: { pct: 0.14, turns: 2 } },
+      { id: 'pulso_sombrio', name: 'Pulso sombrio', mult: 1.04, cooldown: 4, dot: { turns: 3, ratio: 0.1, label: 'Corrupcion' } },
+      { id: 'sello_silente', name: 'Sello silente', mult: 0.98, cooldown: 5, selfBuff: { defensePct: 0.1, turns: 2 } },
+    ],
+  },
+};
+
+export const ENEMY_FAMILIES_BY_ZONE = {
+  0: [
+    {
+      id: 'foro_ruffians',
+      name: 'Maleantes del foro',
+      weight: 0.44,
+      archetypeWeights: { berserker: 0.34, assassin: 0.32, guardian: 0.16, beast: 0.12, occult: 0.06 },
+      enemies: ['Rufian del Foro', 'Apostador Violento', 'Mercenario de Bronce', 'Ladron de Tuneles'],
+      boss: 'Campeon de Grava',
+      mechanicTags: ['burst', 'bleed'],
+    },
+    {
+      id: 'pit_guards',
+      name: 'Guardias del foso',
+      weight: 0.34,
+      archetypeWeights: { guardian: 0.42, berserker: 0.24, assassin: 0.14, occult: 0.12, beast: 0.08 },
+      enemies: ['Centinela de Arena', 'Custodio del Foro', 'Escudero de Bronce'],
+      boss: 'Prefecto de la Grava',
+      mechanicTags: ['block', 'armor'],
+    },
+    {
+      id: 'dust_cult',
+      name: 'Culto del polvo',
+      weight: 0.22,
+      archetypeWeights: { occult: 0.46, assassin: 0.24, guardian: 0.14, berserker: 0.1, beast: 0.06 },
+      enemies: ['Fanatico del Polvo', 'Tejedor de Apuestas', 'Acolito del Ruedo'],
+      boss: 'Hierofante de Arena',
+      mechanicTags: ['dot', 'control'],
+    },
+  ],
+  1: [
+    {
+      id: 'blood_hunt',
+      name: 'Caceria carmesi',
+      weight: 0.48,
+      archetypeWeights: { beast: 0.4, assassin: 0.22, berserker: 0.2, guardian: 0.1, occult: 0.08 },
+      enemies: ['Jabali Enloquecido', 'Tigre de Jaula', 'Lobo de Niebla'],
+      boss: 'Gran Acechador Berkan',
+      mechanicTags: ['bleed', 'aggressive'],
+    },
+    {
+      id: 'forest_raiders',
+      name: 'Saqueadores del robledal',
+      weight: 0.34,
+      archetypeWeights: { assassin: 0.36, berserker: 0.3, guardian: 0.18, occult: 0.1, beast: 0.06 },
+      enemies: ['Bandido del Roble', 'Cazador Sombrio', 'Hostigador de Bruma'],
+      boss: 'Cacique de la Niebla',
+      mechanicTags: ['execution', 'dodge'],
+    },
+    {
+      id: 'thorn_circle',
+      name: 'Circulo de espinas',
+      weight: 0.18,
+      archetypeWeights: { occult: 0.44, beast: 0.22, guardian: 0.18, assassin: 0.1, berserker: 0.06 },
+      enemies: ['Druida Roto', 'Chamana de Zarzas', 'Acechador Umbra'],
+      boss: 'Oraculo de Espinas',
+      mechanicTags: ['dot', 'debuff'],
+    },
+  ],
+  2: [
+    {
+      id: 'ossuary_watch',
+      name: 'Custodios del osario',
+      weight: 0.46,
+      archetypeWeights: { guardian: 0.38, occult: 0.24, berserker: 0.16, beast: 0.14, assassin: 0.08 },
+      enemies: ['Esqueleto Vetusto', 'Guardia del Osario', 'Custodio de Cripta'],
+      boss: 'Pontifice de Hueso',
+      mechanicTags: ['block', 'sustain'],
+    },
+    {
+      id: 'grave_fanatics',
+      name: 'Fanaticos de cripta',
+      weight: 0.32,
+      archetypeWeights: { occult: 0.42, berserker: 0.24, guardian: 0.16, assassin: 0.1, beast: 0.08 },
+      enemies: ['Fanatico de Cripta', 'Necrofago Roto', 'Aspirante del Osario'],
+      boss: 'Profeta de Cripta',
+      mechanicTags: ['control', 'dot'],
+    },
+    {
+      id: 'bone_stalkers',
+      name: 'Acechadores oseos',
+      weight: 0.22,
+      archetypeWeights: { assassin: 0.34, beast: 0.26, occult: 0.18, berserker: 0.14, guardian: 0.08 },
+      enemies: ['Acechador Oseo', 'Heraldo del Polvo', 'Garra de Catacumba'],
+      boss: 'Desollador del Osario',
+      mechanicTags: ['execution', 'bleed'],
+    },
+  ],
+  3: [
+    {
+      id: 'sun_reavers',
+      name: 'Saqueadores del sol',
+      weight: 0.44,
+      archetypeWeights: { berserker: 0.32, assassin: 0.24, beast: 0.2, guardian: 0.14, occult: 0.1 },
+      enemies: ['Saqueador de Caravana', 'Escorpion de Brasa', 'Jinete del Viento'],
+      boss: 'Anhur, el Sol Partido',
+      mechanicTags: ['burst', 'speed'],
+    },
+    {
+      id: 'black_date_clan',
+      name: 'Clan del datil negro',
+      weight: 0.31,
+      archetypeWeights: { assassin: 0.34, occult: 0.28, berserker: 0.16, guardian: 0.12, beast: 0.1 },
+      enemies: ['Chaman del Datil Negro', 'Lancero Solar', 'Filo de las Dunas'],
+      boss: 'Anacoreta del Sol Roto',
+      mechanicTags: ['dot', 'execution'],
+    },
+    {
+      id: 'dune_sentinels',
+      name: 'Centinelas de las dunas',
+      weight: 0.25,
+      archetypeWeights: { guardian: 0.36, beast: 0.22, berserker: 0.18, occult: 0.14, assassin: 0.1 },
+      enemies: ['Mastin de Onice', 'Custodio de Caravana', 'Guardia del Obelisco'],
+      boss: 'Centurion de Onice',
+      mechanicTags: ['sustain', 'armor'],
+    },
+  ],
+  4: [
+    {
+      id: 'eclipse_legion',
+      name: 'Legion del eclipse',
+      weight: 0.47,
+      archetypeWeights: { guardian: 0.3, berserker: 0.24, occult: 0.2, assassin: 0.16, beast: 0.1 },
+      enemies: ['Guardia Obsidiana', 'Verdugo del Eclipse', 'Ballestero Negro'],
+      boss: 'General Varzok',
+      mechanicTags: ['block', 'control'],
+    },
+    {
+      id: 'siege_engineers',
+      name: 'Ingenieros del asedio',
+      weight: 0.29,
+      archetypeWeights: { occult: 0.38, guardian: 0.24, assassin: 0.16, berserker: 0.14, beast: 0.08 },
+      enemies: ['Ingeniero del Asedio', 'Artillero de Onice', 'Perito de Ruina'],
+      boss: 'Maestro de Catapultas Vorh',
+      mechanicTags: ['dot', 'armorBreak'],
+    },
+    {
+      id: 'black_vanguard',
+      name: 'Vanguardia negra',
+      weight: 0.24,
+      archetypeWeights: { berserker: 0.28, assassin: 0.28, guardian: 0.18, beast: 0.14, occult: 0.12 },
+      enemies: ['Espada Negra', 'Duelista Umbral', 'Cazador de Murallas'],
+      boss: 'Legado de Varzok',
+      mechanicTags: ['burst', 'execution'],
+    },
+  ],
+  5: [
+    {
+      id: 'iron_necropolis',
+      name: 'Necropolis ferrica',
+      weight: 0.42,
+      archetypeWeights: { occult: 0.34, guardian: 0.26, berserker: 0.16, beast: 0.14, assassin: 0.1 },
+      enemies: ['Arconte Ferrum', 'Espectro de Cadena', 'Mecanico Sacrilego'],
+      boss: 'Maquina-Rey Nax',
+      mechanicTags: ['control', 'sustain'],
+    },
+    {
+      id: 'throne_profaners',
+      name: 'Profanadores del trono',
+      weight: 0.33,
+      archetypeWeights: { berserker: 0.24, assassin: 0.22, occult: 0.22, guardian: 0.18, beast: 0.14 },
+      enemies: ['Profanador del Trono', 'Aspirante Ferrum', 'Dogma de Cadena'],
+      boss: 'Pontifice de Acero',
+      mechanicTags: ['dot', 'burst'],
+    },
+    {
+      id: 'clockwork_hounds',
+      name: 'Jauria mecanica',
+      weight: 0.25,
+      archetypeWeights: { beast: 0.34, assassin: 0.24, guardian: 0.18, berserker: 0.14, occult: 0.1 },
+      enemies: ['Sabueso Ferrico', 'Hiena de Chispa', 'Triturador de Chatarra'],
+      boss: 'Karn, Motor de Caza',
+      mechanicTags: ['speed', 'bleed'],
+    },
+  ],
+  6: [
+    {
+      id: 'astral_sentinels',
+      name: 'Centinelas astrales',
+      weight: 0.41,
+      archetypeWeights: { occult: 0.32, guardian: 0.22, assassin: 0.18, beast: 0.14, berserker: 0.14 },
+      enemies: ['Centinela Astral', 'Bestia Prismatica', 'Oraculo Corrupto'],
+      boss: 'Aion, Devorador de Ecos',
+      mechanicTags: ['control', 'execution'],
+    },
+    {
+      id: 'void_reapers',
+      name: 'Segadores del vacio',
+      weight: 0.35,
+      archetypeWeights: { assassin: 0.3, berserker: 0.24, occult: 0.2, beast: 0.16, guardian: 0.1 },
+      enemies: ['Segador del Vacio', 'Corte de Nebula', 'Aguja del Umbral'],
+      boss: 'Kazr, Veredicto Vacuo',
+      mechanicTags: ['burst', 'execution'],
+    },
+    {
+      id: 'echo_conclave',
+      name: 'Conclave de ecos',
+      weight: 0.24,
+      archetypeWeights: { occult: 0.4, guardian: 0.2, beast: 0.16, assassin: 0.14, berserker: 0.1 },
+      enemies: ['Liturgista del Eco', 'Arconte Prismico', 'Sombra Resonante'],
+      boss: 'Tetrarca del Eco',
+      mechanicTags: ['dot', 'armorBreak'],
+    },
+  ],
+};
+
+export const ENEMY_AFFIXES = [
+  {
+    id: 'feroz',
+    name: 'Feroz',
+    threatCost: 0.11,
+    mechanicCost: 1,
+    mods: { attackMult: 1.16, critAdd: 0.025 },
+    tags: ['burst'],
+    incompatibleWith: ['baluarte'],
+  },
+  {
+    id: 'baluarte',
+    name: 'Baluarte',
+    threatCost: 0.12,
+    mechanicCost: 1,
+    mods: { defenseMult: 1.2, hpMult: 1.12, speedMult: 0.95 },
+    tags: ['sustain', 'armor'],
+    incompatibleWith: ['feroz', 'depredador'],
+  },
+  {
+    id: 'acechante',
+    name: 'Acechante',
+    threatCost: 0.1,
+    mechanicCost: 1,
+    mods: { speedMult: 1.16, dodgeAdd: 0.03 },
+    tags: ['speed', 'execution'],
+    incompatibleWith: ['muro_de_escudos'],
+  },
+  {
+    id: 'vampirico',
+    name: 'Vampirico',
+    threatCost: 0.12,
+    mechanicCost: 1,
+    mods: { lifestealAdd: 0.055, hpMult: 1.06 },
+    tags: ['sustain'],
+    incompatibleWith: ['hemorragico'],
+  },
+  {
+    id: 'muro_de_escudos',
+    name: 'Muro de escudos',
+    threatCost: 0.11,
+    mechanicCost: 1,
+    mods: { blockAdd: 0.055, shieldPct: 0.08 },
+    tags: ['block', 'control'],
+    incompatibleWith: ['acechante', 'embestida_de_muerte'],
+  },
+  {
+    id: 'corrosivo',
+    name: 'Corrosivo',
+    threatCost: 0.09,
+    mechanicCost: 1,
+    mods: { forceArmorBreak: { pct: 0.08, turns: 2 } },
+    tags: ['control', 'armorBreak'],
+    incompatibleWith: [],
+  },
+  {
+    id: 'hemorragico',
+    name: 'Hemorragico',
+    threatCost: 0.1,
+    mechanicCost: 1,
+    mods: { forceDot: { turns: 2, ratio: 0.08, label: 'Hemorragia intensa' } },
+    tags: ['dot'],
+    incompatibleWith: ['vampirico'],
+  },
+  {
+    id: 'depredador',
+    name: 'Depredador',
+    threatCost: 0.13,
+    mechanicCost: 1,
+    mods: { attackMult: 1.1, executeThresholdAdd: 0.08, executeMultAdd: 0.24 },
+    tags: ['execution', 'burst'],
+    incompatibleWith: ['baluarte'],
+  },
+  {
+    id: 'implacable',
+    name: 'Implacable',
+    threatCost: 0.11,
+    mechanicCost: 1,
+    mods: { attackMult: 1.08, speedMult: 1.08 },
+    tags: ['aggressive'],
+    incompatibleWith: ['muro_de_escudos'],
+  },
+  {
+    id: 'entropico',
+    name: 'Entropico',
+    threatCost: 0.12,
+    mechanicCost: 1,
+    mods: { critAdd: 0.02, dodgeAdd: 0.02, blockAdd: 0.02 },
+    tags: ['control', 'variance'],
+    incompatibleWith: ['baluarte'],
+  },
+  {
+    id: 'embestida_de_muerte',
+    name: 'Embestida de muerte',
+    threatCost: 0.14,
+    mechanicCost: 1,
+    mods: { attackMult: 1.14, speedMult: 1.05, defenseMult: 0.92 },
+    tags: ['burst'],
+    incompatibleWith: ['muro_de_escudos'],
+  },
+];
+
+export const ENCOUNTER_TEMPLATES = {
+  arena: {
+    mode: 'arena',
+    modeFactor: 1.0,
+    varianceRange: [0.94, 1.08],
+    kindWeights: { normal: 0.76, elite: 0.2, boss: 0.04 },
+    rewardFactor: 1.0,
+  },
+  dungeon: {
+    mode: 'dungeon',
+    modeFactor: 1.08,
+    varianceRange: [0.96, 1.1],
+    kindWeights: { normal: 0.58, elite: 0.27, boss: 0.15 },
+    rewardFactor: 1.12,
+  },
+  event: {
+    mode: 'event',
+    modeFactor: 1.12,
+    varianceRange: [0.98, 1.12],
+    kindWeights: { normal: 0.5, elite: 0.32, boss: 0.18 },
+    rewardFactor: 1.2,
+  },
+};
+
+export const THREAT_BANDS = [
+  { id: 'low', label: 'Baja', min: 0, max: 90 },
+  { id: 'medium', label: 'Media', min: 90, max: 118 },
+  { id: 'high', label: 'Alta', min: 118, max: 146 },
+  { id: 'extreme', label: 'Extrema', min: 146, max: Infinity },
+];
+
 export const ZONES = [
   {
     id: 0,
@@ -362,6 +769,49 @@ export const ZONES = [
     boss: 'Aion, Devorador de Ecos'
   },
 ];
+
+const ENEMY_LEVEL_BANDS = [
+  { id: 'novice', minLevel: 1, maxLevel: 8, baseBudget: 118 },
+  { id: 'veteran', minLevel: 9, maxLevel: 17, baseBudget: 188 },
+  { id: 'champion', minLevel: 18, maxLevel: 27, baseBudget: 274 },
+  { id: 'mythic', minLevel: 28, maxLevel: 90, baseBudget: 372 },
+];
+
+export const ENEMY_BUDGETS = Object.fromEntries(
+  ZONES.map((zone) => [
+    zone.id,
+    ENEMY_LEVEL_BANDS.map((band) => ({
+      ...band,
+      baseBudget: Math.round(band.baseBudget * (1 + zone.id * 0.12)),
+      kindFactors: {
+        normal: 0.94,
+        elite: 1.12,
+        boss: 1.28,
+      },
+    })),
+  ])
+);
+
+export const REWARD_CURVES = {
+  arena: [
+    { minThreat: 0, goldFactor: 0.88, xpFactor: 0.9, materialFactor: 0.82, dropChance: 0.21, rarityBias: -0.02 },
+    { minThreat: 90, goldFactor: 1.0, xpFactor: 1.0, materialFactor: 1.0, dropChance: 0.27, rarityBias: 0.0 },
+    { minThreat: 118, goldFactor: 1.15, xpFactor: 1.14, materialFactor: 1.2, dropChance: 0.34, rarityBias: 0.02 },
+    { minThreat: 146, goldFactor: 1.34, xpFactor: 1.3, materialFactor: 1.46, dropChance: 0.41, rarityBias: 0.04 },
+  ],
+  dungeon: [
+    { minThreat: 0, goldFactor: 0.96, xpFactor: 1.0, materialFactor: 0.94, dropChance: 0.27, rarityBias: 0.0 },
+    { minThreat: 90, goldFactor: 1.08, xpFactor: 1.1, materialFactor: 1.14, dropChance: 0.34, rarityBias: 0.02 },
+    { minThreat: 118, goldFactor: 1.26, xpFactor: 1.22, materialFactor: 1.34, dropChance: 0.43, rarityBias: 0.04 },
+    { minThreat: 146, goldFactor: 1.44, xpFactor: 1.38, materialFactor: 1.62, dropChance: 0.52, rarityBias: 0.06 },
+  ],
+  event: [
+    { minThreat: 0, goldFactor: 1.0, xpFactor: 1.04, materialFactor: 1.0, dropChance: 0.32, rarityBias: 0.01 },
+    { minThreat: 90, goldFactor: 1.14, xpFactor: 1.16, materialFactor: 1.22, dropChance: 0.4, rarityBias: 0.03 },
+    { minThreat: 118, goldFactor: 1.32, xpFactor: 1.3, materialFactor: 1.42, dropChance: 0.48, rarityBias: 0.05 },
+    { minThreat: 146, goldFactor: 1.54, xpFactor: 1.48, materialFactor: 1.72, dropChance: 0.57, rarityBias: 0.07 },
+  ],
+};
 
 export const JOBS = [
   { id: 'guardia', name: 'Guardia del Foro', duration: 45, reward: { gold: 120, xp: 25, food: 1 }, desc: 'Patrulla, disciplina y monedas seguras.' },

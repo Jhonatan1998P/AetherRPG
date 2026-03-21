@@ -27,6 +27,7 @@ export function createMainViews(deps) {
     equippedSlotCard,
     inventoryCards,
     zoneSelector,
+    previewEncounter,
   } = deps;
 
   function expeditionTimerText() {
@@ -306,6 +307,16 @@ export function createMainViews(deps) {
     const ds = getDerivedStats();
     const hpRatio = ds.maxHp ? state.player.hp / ds.maxHp : 1;
     const recommendation = hpRatio < 0.5 ? 'normal' : readySkills.length >= 2 ? 'elite' : 'normal';
+    const normalPreview = previewEncounter('normal', 'arena', { zone });
+    const elitePreview = previewEncounter('elite', 'arena', { zone });
+    const blitzGold = Math.round((normalPreview.rewardProfile.reward.gold || 0) * 2.8);
+    const blitzXp = Math.round((normalPreview.rewardProfile.reward.xp || 0) * 2.8);
+
+    const previewLine = (preview) => `${preview.threatLabel} · ${Math.round(preview.threatScore)} amenaza`;
+    const previewMods = (preview) => {
+      const affixes = preview.enemy && Array.isArray(preview.enemy.affixes) ? preview.enemy.affixes : [];
+      return affixes.length ? affixes.join(', ') : 'Sin modificadores destacados';
+    };
 
     return `
       <div class="space-y-5">
@@ -330,7 +341,8 @@ export function createMainViews(deps) {
                   <div class="font-black text-lg">Normal</div>
                   ${recommendation === 'normal' ? statusChip('Recomendado', 'success') : statusChip('Estable', 'success')}
                 </div>
-                <p class="text-sm text-slate-300/76 mt-2">Flujo seguro para mantener ritmo cuando estás ajustando build.</p>
+                <p class="text-sm text-slate-300/76 mt-2">Flujo seguro para mantener ritmo cuando estas ajustando build.</p>
+                <p class="text-xs text-slate-300/62 mt-2">${previewLine(normalPreview)} · ${normalPreview.rewardText}</p>
               </button>
 
               <button type="button" class="surface-strong elite-card rounded-2xl p-4 text-left" onclick="game.fightArena('elite')">
@@ -338,7 +350,8 @@ export function createMainViews(deps) {
                   <div class="font-black text-lg">Élite</div>
                   ${recommendation === 'elite' ? statusChip('Recomendado', 'warning') : statusChip('Riesgo', 'warning')}
                 </div>
-                <p class="text-sm text-slate-300/76 mt-2">Más exigente, mejor retorno cuando ya tienes vida y habilidades estables.</p>
+                <p class="text-sm text-slate-300/76 mt-2">Mas exigente, mejor retorno cuando ya tienes vida y habilidades estables.</p>
+                <p class="text-xs text-slate-300/62 mt-2">${previewLine(elitePreview)} · ${elitePreview.rewardText}</p>
               </button>
 
               <button type="button" class="surface-strong reward-card rounded-2xl p-4 text-left" onclick="game.arenaBlitz(3)">
@@ -347,13 +360,15 @@ export function createMainViews(deps) {
                   ${statusChip('Acelerar')}
                 </div>
                 <p class="text-sm text-slate-300/76 mt-2">Multiplica combates para subir ritmo cuando dominas la zona actual.</p>
+                <p class="text-xs text-slate-300/62 mt-2">Estimado: ~${fmt(blitzGold)} oro · ~${fmt(blitzXp)} XP</p>
               </button>
             </div>
 
-            <div class="grid sm:grid-cols-3 gap-3 mt-4">
+            <div class="grid sm:grid-cols-4 gap-3 mt-4">
               ${htmlStat('Zona activa', zone.name, zone.theme)}
               ${htmlStat('Coste', `${zone.energyCost}⚡ / ${zone.staminaCost}💪`, 'Por combate')}
               ${htmlStat('Registro', `${state.stats.wins}V / ${state.stats.losses}D`, 'Historial global')}
+              ${htmlStat('Ajuste adaptativo', `${Math.round(((state.combatDifficulty && state.combatDifficulty.adaptiveOffset) || 0) * 100)}%`, 'Dificultad dinamica reciente')}
             </div>
 
             <details class="surface-subtle rounded-2xl p-4 mt-4">
@@ -376,6 +391,8 @@ export function createMainViews(deps) {
               <div class="grid gap-3">
                 ${infoCard('Habilidades activas', readySkills.length ? readySkills.map((skill) => `${skill.name} · Nv ${state.player.skillLevels[skill.id] || 1}`).join('<br>') : 'No hay habilidades activas equipadas.', 'surface-subtle')}
                 ${infoCard('Contexto', `Victorias ${state.stats.wins} · Derrotas ${state.stats.losses} · Bajas ${state.stats.kills}`, 'surface-subtle')}
+                ${infoCard('Amenaza normal', `${previewLine(normalPreview)}<br>Mods: ${previewMods(normalPreview)}`, 'surface-subtle')}
+                ${infoCard('Amenaza elite', `${previewLine(elitePreview)}<br>Mods: ${previewMods(elitePreview)}`, 'surface-subtle')}
               </div>
             </div>
 
@@ -388,7 +405,7 @@ export function createMainViews(deps) {
                       <div class="font-black ${entry.result === 'victory' ? 'text-emerald-300' : 'text-rose-300'}">${entry.title}</div>
                       <div class="text-sm text-slate-300/70 mt-1">${entry.zone}</div>
                       <div class="text-xs text-slate-300/58 mt-2">${summarizeReward(entry.rewards)}</div>
-                      <div class="text-xs text-slate-300/58 mt-1">${entry.summary ? `${entry.summary.turnsPlayed} turnos · ${entry.stats ? `${entry.stats.damageDone} daño` : 'sin datos de daño'}` : 'sin resumen de combate'}</div>
+                      <div class="text-xs text-slate-300/58 mt-1">${entry.summary ? `${entry.summary.turnsPlayed} turnos · ${entry.stats ? `${entry.stats.damageDone} dano` : 'sin datos de dano'} · ${entry.threat ? `${Math.round(entry.threat.score)} amenaza` : 'amenaza no registrada'}` : 'sin resumen de combate'}</div>
                     </button>
                   `).join('')
                   : '<div class="empty-state">Aún no hay combates recientes.</div>'}
