@@ -248,6 +248,7 @@ export function createCombatDomain(deps) {
       : chooseEnemySkill(attacker);
 
     if (!skill) {
+      if (isPlayer) statsDelta.playerBasicAttacks += 1;
       const hit = performHit(attacker, defender, 'Golpe básico', 1, {}, log);
       if (hit.damage > 0) {
         if (isPlayer) statsDelta.damageDone += hit.damage;
@@ -257,6 +258,7 @@ export function createCombatDomain(deps) {
     }
 
     const mult = (skill.mult || 1) * (isPlayer ? skillLevelMult(playerContext.skillLevels, skill.id) : 1);
+    if (isPlayer) statsDelta.playerSkillCasts += 1;
     const hits = skill.hits || 1;
     let lastHit = null;
 
@@ -294,10 +296,18 @@ export function createCombatDomain(deps) {
   function runCombat({ enemy, playerState, derivedStats, zoneName, maxTurns = 28 }) {
     const player = buildPlayerCombatant(playerState, derivedStats);
     const foe = JSON.parse(JSON.stringify(enemy));
+    const playerStartHp = player.hp;
+    const foeStartHp = foe.hp;
     const log = [
-      `🏟️ <b>${player.name}</b> se enfrenta a <b>${foe.name}</b> en <b>${zoneName}</b>.`
+      `🏟️ Duelo en ${zoneName}: ${player.name} vs ${foe.name}.`
     ];
-    const statsDelta = { damageDone: 0, damageTaken: 0, crits: 0 };
+    const statsDelta = {
+      damageDone: 0,
+      damageTaken: 0,
+      crits: 0,
+      playerSkillCasts: 0,
+      playerBasicAttacks: 0,
+    };
     const playerContext = {
       equipment: playerState.equipment,
       skillLevels: playerState.skillLevels,
@@ -305,6 +315,7 @@ export function createCombatDomain(deps) {
 
     let turn = 1;
     while (player.hp > 0 && foe.hp > 0 && turn <= maxTurns) {
+      log.push(`— Turno ${turn} —`);
       decayStatuses(player, log);
       decayStatuses(foe, log);
       if (player.hp <= 0 || foe.hp <= 0) break;
@@ -319,9 +330,23 @@ export function createCombatDomain(deps) {
         if (defender.hp <= 0) break;
       }
 
+      log.push(`📊 Fin turno ${turn}: ${player.name} ${Math.max(0, player.hp)}/${player.maxHp} HP · ${foe.name} ${Math.max(0, foe.hp)}/${foe.maxHp} HP`);
+
       tickCooldowns(player);
       tickCooldowns(foe);
       turn += 1;
+    }
+
+    const turnsPlayed = Math.max(0, turn - 1);
+    const victory = player.hp > 0 && foe.hp <= 0;
+    const endReason = victory
+      ? 'enemy_defeated'
+      : player.hp <= 0
+        ? 'player_defeated'
+        : 'turn_limit';
+
+    if (endReason === 'turn_limit') {
+      log.push('⏱️ El combate terminó por límite de turnos.');
     }
 
     return {
@@ -329,7 +354,15 @@ export function createCombatDomain(deps) {
       foe,
       log,
       statsDelta,
-      victory: player.hp > 0 && foe.hp <= 0,
+      summary: {
+        turnsPlayed,
+        endReason,
+        playerStartHp,
+        playerEndHp: Math.max(0, player.hp),
+        foeStartHp,
+        foeEndHp: Math.max(0, foe.hp),
+      },
+      victory,
     };
   }
 

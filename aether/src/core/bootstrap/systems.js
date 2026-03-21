@@ -218,13 +218,23 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function summarizeReward(reward) {
-    return Object.entries(reward).map(([k, v]) => {
+    if (!reward || typeof reward !== 'object') return 'Sin recompensas';
+    const entries = Object.entries(reward).filter(([, v]) => Number(v) > 0);
+    if (!entries.length) return 'Sin recompensas';
+    return entries.map(([k, v]) => {
       const label = {
         xp: 'XP', gold: 'oro', shards: 'fragmentos', iron: 'hierro', wood: 'madera',
         essence: 'esencia', sigils: 'sigilos', echoShards: 'eco fragmentos', food: 'comida', potions: 'pociones', keys: 'llaves', relicDust: 'polvo reliquia'
       }[k] || k;
       return `+${fmt(v)} ${label}`;
     }).join(' · ');
+  }
+
+  function combatEndReasonLabel(endReason) {
+    if (endReason === 'enemy_defeated') return 'Enemigo derrotado';
+    if (endReason === 'player_defeated') return 'Caída del jugador';
+    if (endReason === 'turn_limit') return 'Límite de turnos';
+    return 'Resolución normal';
   }
 
   function gainXp(amount) {
@@ -349,7 +359,13 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function actorTurn(attacker, defender, isPlayer, log) {
-    const statsDelta = { damageDone: 0, damageTaken: 0, crits: 0 };
+    const statsDelta = {
+      damageDone: 0,
+      damageTaken: 0,
+      crits: 0,
+      playerSkillCasts: 0,
+      playerBasicAttacks: 0,
+    };
     return combatDomain.actorTurn(attacker, defender, isPlayer, {
       equipment: state.player.equipment,
       skillLevels: state.player.skillLevels,
@@ -373,7 +389,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       maxTurns: 28,
     });
 
-    const { player, foe, log, victory, statsDelta } = simulation;
+    const { player, foe, log, victory, statsDelta, summary } = simulation;
     state.stats.damageDone += statsDelta.damageDone;
     state.stats.damageTaken += statsDelta.damageTaken;
     state.stats.crits += statsDelta.crits;
@@ -449,6 +465,14 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
       enemy: foe.name,
       zone: ZONES[foe.zoneId].name,
       log,
+      summary,
+      stats: {
+        damageDone: statsDelta.damageDone,
+        damageTaken: statsDelta.damageTaken,
+        crits: statsDelta.crits,
+        playerSkillCasts: statsDelta.playerSkillCasts,
+        playerBasicAttacks: statsDelta.playerBasicAttacks,
+      },
       rewards,
       drop,
     });
@@ -471,8 +495,26 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
               <div class="text-sm text-slate-300/75 mt-1">${foe.name} ${victory ? 'cayó derrotado' : 'sobrevivió al duelo'}.</div>
             </div>
           </div>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="glass rounded-2xl p-4">
+              <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Ritmo</div>
+              <div class="text-lg font-black text-white">${summary.turnsPlayed} turnos</div>
+              <div class="text-xs text-slate-300/70 mt-1">${combatEndReasonLabel(summary.endReason)}</div>
+            </div>
+            <div class="glass rounded-2xl p-4">
+              <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Daño</div>
+              <div class="text-sm text-slate-100/90">Infligido: <b>${fmt(statsDelta.damageDone)}</b></div>
+              <div class="text-sm text-slate-100/90">Recibido: <b>${fmt(statsDelta.damageTaken)}</b></div>
+            </div>
+            <div class="glass rounded-2xl p-4">
+              <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Acciones</div>
+              <div class="text-sm text-slate-100/90">Habilidades: <b>${fmt(statsDelta.playerSkillCasts)}</b></div>
+              <div class="text-sm text-slate-100/90">Golpes básicos: <b>${fmt(statsDelta.playerBasicAttacks)}</b></div>
+              <div class="text-sm text-slate-100/90">Críticos: <b>${fmt(statsDelta.crits)}</b></div>
+            </div>
+          </div>
           <div class="glass rounded-2xl p-4 max-h-[55vh] overflow-auto">
-            <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-3">Registro de combate</div>
+            <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-3">Registro turno a turno</div>
             <div class="space-y-2 text-sm text-slate-100/90">${log.map(line => `<div class="leading-relaxed">${line}</div>`).join('')}</div>
           </div>
         </div>

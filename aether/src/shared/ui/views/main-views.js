@@ -388,6 +388,7 @@ export function createMainViews(deps) {
                       <div class="font-black ${entry.result === 'victory' ? 'text-emerald-300' : 'text-rose-300'}">${entry.title}</div>
                       <div class="text-sm text-slate-300/70 mt-1">${entry.zone}</div>
                       <div class="text-xs text-slate-300/58 mt-2">${summarizeReward(entry.rewards)}</div>
+                      <div class="text-xs text-slate-300/58 mt-1">${entry.summary ? `${entry.summary.turnsPlayed} turnos · ${entry.stats ? `${entry.stats.damageDone} daño` : 'sin datos de daño'}` : 'sin resumen de combate'}</div>
                     </button>
                   `).join('')
                   : '<div class="empty-state">Aún no hay combates recientes.</div>'}

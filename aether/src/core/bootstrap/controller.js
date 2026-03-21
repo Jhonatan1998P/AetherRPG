@@ -376,17 +376,37 @@ import { AetherViewContent } from './views-content.js';
   function showCombat(id) {
     const entry = state.combatHistory.find((combat) => combat.id === id);
     if (!entry) return;
+    const summary = entry.summary || {};
+    const stats = entry.stats || {};
+    const endReason = {
+      enemy_defeated: 'Enemigo derrotado',
+      player_defeated: 'Caída del jugador',
+      turn_limit: 'Límite de turnos',
+    }[summary.endReason] || 'Sin dato';
     mutate('ui/showCombat', () => {
       state.ui.modal = {
         type: 'combat',
         title: sanitizeInlineHtml(entry.title),
         content: `
           <div class="space-y-4">
-            <div class="glass rounded-2xl p-4">
-              <div class="text-sm text-slate-300/75">${sanitizeInlineHtml(entry.zone)}</div>
-              <div class="text-sm text-slate-200/90 mt-2">${sanitizeInlineHtml(Systems.summarizeReward(entry.rewards))}${entry.drop ? ` · Botin: <span class="rarity-${entry.drop.rarity}">${sanitizeInlineHtml(entry.drop.name)}</span>` : ''}</div>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div class="glass rounded-2xl p-4">
+                <div class="text-sm text-slate-300/75">${sanitizeInlineHtml(entry.zone)}</div>
+                <div class="text-sm text-slate-200/90 mt-2">${sanitizeInlineHtml(Systems.summarizeReward(entry.rewards))}${entry.drop ? ` · Botín: <span class="rarity-${entry.drop.rarity}">${sanitizeInlineHtml(entry.drop.name)}</span>` : ''}</div>
+              </div>
+              <div class="glass rounded-2xl p-4">
+                <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-1">Ritmo</div>
+                <div class="text-lg font-black text-white">${Number(summary.turnsPlayed || 0)} turnos</div>
+                <div class="text-xs text-slate-300/70 mt-1">${sanitizeInlineHtml(endReason)}</div>
+              </div>
+            </div>
+            <div class="grid sm:grid-cols-3 gap-3">
+              <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">Daño infligido: <b>${Number(stats.damageDone || 0)}</b></div>
+              <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">Daño recibido: <b>${Number(stats.damageTaken || 0)}</b></div>
+              <div class="glass rounded-2xl p-4 text-sm text-slate-100/90">Críticos: <b>${Number(stats.crits || 0)}</b></div>
             </div>
             <div class="glass rounded-2xl p-4 max-h-[55vh] overflow-auto">
+              <div class="text-xs uppercase tracking-[.18em] text-slate-300/65 mb-3">Registro turno a turno</div>
               <div class="space-y-2 text-sm">${entry.log.map(line => `<div>${sanitizeInlineHtml(line)}</div>`).join('')}</div>
             </div>
           </div>
