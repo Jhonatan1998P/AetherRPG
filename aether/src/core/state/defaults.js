@@ -52,6 +52,7 @@ export function createDefaultsModule(deps) {
         modal: null,
         forgePreview: null,
         moreMenuOpen: false,
+        collapsedCardsByView: {},
       },
       player: {
         name: 'Aurelio',

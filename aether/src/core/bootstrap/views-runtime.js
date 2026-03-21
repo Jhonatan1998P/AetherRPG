@@ -85,7 +85,7 @@ function pageLead(view, badge = '', actions = '') {
   const group = VIEW_GROUPS.find((groupItem) => groupItem.views.includes(view));
   const siblings = group ? group.views : [view];
   return `
-      <div class="glass rounded-3xl p-5 sm:p-6 animate-rise-in">
+      <div class="glass rounded-3xl p-5 sm:p-6">
         <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
             <div class="inline-flex items-center gap-2 text-[11px] uppercase tracking-[.24em] text-cyan-200/75 mb-2">

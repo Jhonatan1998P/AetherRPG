@@ -136,6 +136,9 @@ import { createPersistenceModule } from '../state/persistence.js';
     state.ui.inventoryPageSize = Math.max(6, Number(state.ui.inventoryPageSize) || defaults.ui.inventoryPageSize);
     state.ui.journalPage = Math.max(1, Number(state.ui.journalPage) || 1);
     state.ui.journalPageSize = Math.max(8, Number(state.ui.journalPageSize) || defaults.ui.journalPageSize);
+    if (!state.ui.collapsedCardsByView || typeof state.ui.collapsedCardsByView !== 'object') {
+      state.ui.collapsedCardsByView = {};
+    }
     ensureUnlockedSkills();
     const ds = getDerivedStats();
     state.player.hp = clamp(state.player.hp || ds.maxHp, 1, ds.maxHp);

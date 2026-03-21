@@ -6,7 +6,6 @@ const {
   state,
   fmt,
   htmlStat,
-  progressBar,
   getDerivedStats,
   currentRank,
   activeMeta,
@@ -31,14 +30,17 @@ export function renderHud() {
         : 'Sin guardado';
   const saveTone = storeMeta.isSaving ? 'warning' : (storeMeta.isDirty ? 'danger' : 'success');
   const hpRatio = ds.maxHp ? state.player.hp / ds.maxHp : 1;
-  const survivabilityChip = hpRatio <= 0.35
-    ? '<span class="status-chip danger">Vida crítica</span>'
+  const survivability = hpRatio <= 0.35
+    ? { text: 'Vida crítica', tone: 'danger' }
     : hpRatio <= 0.65
-      ? '<span class="status-chip warning">Vida media</span>'
-      : '<span class="status-chip success">Vida estable</span>';
+      ? { text: 'Vida media', tone: 'warning' }
+      : { text: 'Vida estable', tone: 'success' };
+  const hpPct = ds.maxHp ? Math.max(0, Math.min(100, (state.player.hp / ds.maxHp) * 100)) : 0;
+  const energyPct = ds.maxEnergy ? Math.max(0, Math.min(100, (state.player.energy / ds.maxEnergy) * 100)) : 0;
+  const staminaPct = ds.maxStamina ? Math.max(0, Math.min(100, (state.player.stamina / ds.maxStamina) * 100)) : 0;
 
   return `
-    <div class="glass-strong rounded-[2rem] p-4 sm:p-6 animate-rise-in">
+    <div class="glass-strong rounded-[2rem] p-4 sm:p-6">
       <div class="grid xl:grid-cols-[minmax(0,1.35fr),minmax(310px,.65fr)] gap-5 sm:gap-6">
         <section class="space-y-4 min-w-0">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -53,29 +55,59 @@ export function renderHud() {
                 <span class="status-chip ${saveTone}">${saveLabel}</span>
                 <span class="status-chip">Nivel ${state.player.level}</span>
                 <span class="status-chip">Zona ${meta.label}</span>
-                ${survivabilityChip}
+                <span class="status-chip ${survivability.tone}" data-hud-survivability>${survivability.text}</span>
               </div>
             </div>
             <div class="stat-pill rounded-2xl px-3.5 py-3 shrink-0 min-w-[168px]">
               <div class="text-xs text-slate-300/65 uppercase tracking-[.14em]">Recursos listos</div>
-              <div class="text-base font-black text-emerald-300 leading-tight mt-1">${fmt(state.player.energy)}⚡ · ${fmt(state.player.stamina)}💪</div>
+              <div class="text-base font-black text-emerald-300 leading-tight mt-1" data-hud-resources>${fmt(state.player.energy)}⚡ · ${fmt(state.player.stamina)}💪</div>
               <div class="text-[11px] text-slate-300/68 mt-1">Para combatir, forjar y explorar</div>
             </div>
           </div>
 
           <div class="space-y-3">
-            ${progressBar(state.player.hp, ds.maxHp, 'bg-gradient-to-r from-rose-500 via-pink-400 to-orange-300 shadow-[0_0_16px_rgba(244,63,94,.3)]', 'Vida', 'Salud actual sobre tu vida máxima.')}
-            ${progressBar(state.player.energy, ds.maxEnergy, 'bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 shadow-[0_0_16px_rgba(34,211,238,.3)]', 'Energía', 'Recurso principal para varias acciones activas.')}
-            ${progressBar(state.player.stamina, ds.maxStamina, 'bg-gradient-to-r from-emerald-400 via-lime-300 to-yellow-300 shadow-[0_0_16px_rgba(74,222,128,.28)]', 'Aguante', 'Marca cuántas actividades físicas puedes sostener.')}
+            <div data-tooltip="Salud actual sobre tu vida máxima.">
+              <div class="mb-1 flex items-center justify-between gap-3 text-xs text-slate-300/80">
+                <span class="font-medium tracking-[0.01em]">Vida</span>
+                <span class="font-semibold text-slate-100" data-hud-current="hp">${fmt(state.player.hp)} / ${fmt(ds.maxHp)}</span>
+              </div>
+              <div class="bar">
+                <span class="relative flex h-full rounded-full bg-gradient-to-r from-rose-500 via-pink-400 to-orange-300 shadow-[0_0_16px_rgba(244,63,94,.3)]" data-hud-bar="hp" style="width:${hpPct}%">
+                  <span class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 opacity-80"></span>
+                </span>
+              </div>
+            </div>
+            <div data-tooltip="Recurso principal para varias acciones activas.">
+              <div class="mb-1 flex items-center justify-between gap-3 text-xs text-slate-300/80">
+                <span class="font-medium tracking-[0.01em]">Energía</span>
+                <span class="font-semibold text-slate-100" data-hud-current="energy">${fmt(state.player.energy)} / ${fmt(ds.maxEnergy)}</span>
+              </div>
+              <div class="bar">
+                <span class="relative flex h-full rounded-full bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 shadow-[0_0_16px_rgba(34,211,238,.3)]" data-hud-bar="energy" style="width:${energyPct}%">
+                  <span class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 opacity-80"></span>
+                </span>
+              </div>
+            </div>
+            <div data-tooltip="Marca cuántas actividades físicas puedes sostener.">
+              <div class="mb-1 flex items-center justify-between gap-3 text-xs text-slate-300/80">
+                <span class="font-medium tracking-[0.01em]">Aguante</span>
+                <span class="font-semibold text-slate-100" data-hud-current="stamina">${fmt(state.player.stamina)} / ${fmt(ds.maxStamina)}</span>
+              </div>
+              <div class="bar">
+                <span class="relative flex h-full rounded-full bg-gradient-to-r from-emerald-400 via-lime-300 to-yellow-300 shadow-[0_0_16px_rgba(74,222,128,.28)]" data-hud-bar="stamina" style="width:${staminaPct}%">
+                  <span class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 opacity-80"></span>
+                </span>
+              </div>
+            </div>
           </div>
         </section>
 
         <aside class="space-y-3">
           <div class="kpi-rail">
-            ${htmlStat('Oro', fmt(state.player.gold), '', 'Moneda principal para comprar, forjar y mejorar.')}
-            ${htmlStat('Pociones', fmt(state.player.potions), '', 'Curación rápida para sostener el ciclo activo.')}
-            ${htmlStat('Ataque', fmt(ds.attack), '', 'Daño base de tus golpes y habilidades ofensivas.')}
-            ${htmlStat('Mochila', `${state.player.inventory.length}/${maxInventory()}`, '', 'Capacidad usada frente al máximo disponible.')}
+            ${htmlStat('Oro', `<span data-hud-stat="gold">${fmt(state.player.gold)}</span>`, '', 'Moneda principal para comprar, forjar y mejorar.')}
+            ${htmlStat('Pociones', `<span data-hud-stat="potions">${fmt(state.player.potions)}</span>`, '', 'Curación rápida para sostener el ciclo activo.')}
+            ${htmlStat('Ataque', `<span data-hud-stat="attack">${fmt(ds.attack)}</span>`, '', 'Daño base de tus golpes y habilidades ofensivas.')}
+            ${htmlStat('Mochila', `<span data-hud-stat="inventory">${state.player.inventory.length}/${maxInventory()}</span>`, '', 'Capacidad usada frente al máximo disponible.')}
           </div>
 
           <div class="glass rounded-2xl p-4">

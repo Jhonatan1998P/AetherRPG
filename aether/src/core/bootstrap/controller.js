@@ -4,16 +4,18 @@ import { AetherViewContent } from './views-content.js';
 
 (() => {
   const { STORAGE_KEY, VIEWS, VIEW_META } = window.AetherConfig;
-  const { $, clamp, timeLeft, sanitizeInlineHtml } = window.AetherUtils;
+  const { $, clamp, fmt, timeLeft, sanitizeInlineHtml } = window.AetherUtils;
   const {
     state,
     loadGame,
     saveGame,
     getDerivedStats,
+    maxInventory,
     hardReset,
     mutate,
     subscribeStore,
     getStoreMeta,
+    setStoreMeta,
     syncExternalState,
   } = window.AetherModel;
   const Systems = window.AetherSystems;
@@ -86,6 +88,58 @@ import { AetherViewContent } from './views-content.js';
     });
   }
 
+  function updateLiveHud() {
+    const root = regionEl('hud');
+    if (!root) return false;
+
+    const ds = getDerivedStats();
+    const hpRatio = ds.maxHp ? state.player.hp / ds.maxHp : 1;
+    const hpPct = ds.maxHp ? Math.max(0, Math.min(100, (state.player.hp / ds.maxHp) * 100)) : 0;
+    const energyPct = ds.maxEnergy ? Math.max(0, Math.min(100, (state.player.energy / ds.maxEnergy) * 100)) : 0;
+    const staminaPct = ds.maxStamina ? Math.max(0, Math.min(100, (state.player.stamina / ds.maxStamina) * 100)) : 0;
+
+    const survivability = hpRatio <= 0.35
+      ? { text: 'Vida crítica', tone: 'danger' }
+      : hpRatio <= 0.65
+        ? { text: 'Vida media', tone: 'warning' }
+        : { text: 'Vida estable', tone: 'success' };
+
+    const applyText = (selector, text) => {
+      const el = root.querySelector(selector);
+      if (el && el.textContent !== text) el.textContent = text;
+    };
+
+    const applyBar = (key, pctValue) => {
+      const el = root.querySelector(`[data-hud-bar="${key}"]`);
+      if (!el) return;
+      const width = `${pctValue}%`;
+      if (el.style.width !== width) el.style.width = width;
+    };
+
+    applyText('[data-hud-resources]', `${fmt(state.player.energy)}⚡ · ${fmt(state.player.stamina)}💪`);
+    applyText('[data-hud-current="hp"]', `${fmt(state.player.hp)} / ${fmt(ds.maxHp)}`);
+    applyText('[data-hud-current="energy"]', `${fmt(state.player.energy)} / ${fmt(ds.maxEnergy)}`);
+    applyText('[data-hud-current="stamina"]', `${fmt(state.player.stamina)} / ${fmt(ds.maxStamina)}`);
+
+    applyBar('hp', hpPct);
+    applyBar('energy', energyPct);
+    applyBar('stamina', staminaPct);
+
+    applyText('[data-hud-stat="gold"]', fmt(state.player.gold));
+    applyText('[data-hud-stat="potions"]', fmt(state.player.potions));
+    applyText('[data-hud-stat="attack"]', fmt(ds.attack));
+    applyText('[data-hud-stat="inventory"]', `${state.player.inventory.length}/${maxInventory()}`);
+
+    const survivabilityEl = root.querySelector('[data-hud-survivability]');
+    if (survivabilityEl) {
+      survivabilityEl.textContent = survivability.text;
+      survivabilityEl.classList.remove('success', 'warning', 'danger');
+      survivabilityEl.classList.add(survivability.tone);
+    }
+
+    return true;
+  }
+
   function cardLabelFrom(card, index) {
     const explicit = (card.getAttribute('data-card-title') || '').trim();
     if (explicit) return explicit;
@@ -95,6 +149,45 @@ import { AetherViewContent } from './views-content.js';
     if (headingText) return headingText;
 
     return `Tarjeta ${index + 1}`;
+  }
+
+  function cardDepth(node) {
+    let depth = 0;
+    let current = node;
+    while (current && current.parentElement) {
+      depth += 1;
+      current = current.parentElement;
+    }
+    return depth;
+  }
+
+  function cardDomPath(root, node) {
+    const parts = [];
+    let current = node;
+    while (current && current !== root) {
+      let index = 0;
+      let prev = current.previousElementSibling;
+      while (prev) {
+        index += 1;
+        prev = prev.previousElementSibling;
+      }
+      parts.push(index);
+      current = current.parentElement;
+    }
+    return parts.reverse().join('.');
+  }
+
+  function setCardCollapsedPreference(view, cardKey, collapsed) {
+    mutate('ui/setCardCollapsed', () => {
+      if (!state.ui.collapsedCardsByView || typeof state.ui.collapsedCardsByView !== 'object') {
+        state.ui.collapsedCardsByView = {};
+      }
+      if (!state.ui.collapsedCardsByView[view] || typeof state.ui.collapsedCardsByView[view] !== 'object') {
+        state.ui.collapsedCardsByView[view] = {};
+      }
+      state.ui.collapsedCardsByView[view][cardKey] = !!collapsed;
+    }, { source: 'ui' });
+    scheduleSave();
   }
 
   function hydrateCollapsibleCards() {
@@ -112,8 +205,20 @@ import { AetherViewContent } from './views-content.js';
       return true;
     });
 
-    let mainOpened = false;
-    candidates.forEach((card, index) => {
+    const view = state.currentView || 'resumen';
+    const collapsedByView = (state.ui.collapsedCardsByView && state.ui.collapsedCardsByView[view]) || {};
+    const hasStoredPreferences = Object.keys(collapsedByView).length > 0;
+
+    const cardEntries = candidates.map((card, order) => ({
+      card,
+      order,
+      depth: cardDepth(card),
+      domPath: cardDomPath(root, card),
+    }));
+    const processingEntries = [...cardEntries].sort((a, b) => b.depth - a.depth || a.order - b.order);
+
+    processingEntries.forEach((entry) => {
+      const { card, order } = entry;
       const details = document.createElement('details');
 
       Array.from(card.attributes).forEach((attr) => {
@@ -128,7 +233,8 @@ import { AetherViewContent } from './views-content.js';
 
       const label = document.createElement('span');
       label.className = 'card-collapsible-label';
-      label.textContent = cardLabelFrom(card, index);
+      const cardLabel = cardLabelFrom(card, order);
+      label.textContent = cardLabel;
 
       const chevron = document.createElement('span');
       chevron.className = 'card-collapsible-chevron';
@@ -143,11 +249,21 @@ import { AetherViewContent } from './views-content.js';
 
       details.append(summary, body);
 
-      const isPrimaryCard = !mainOpened && (card.classList.contains('rounded-3xl') || index === 0);
-      if (isPrimaryCard) {
+      const explicitCardId = (card.getAttribute('data-card-id') || '').trim();
+      const cardKey = explicitCardId || `${view}:${entry.domPath}`;
+      details.dataset.cardKey = cardKey;
+
+      if (Object.prototype.hasOwnProperty.call(collapsedByView, cardKey)) {
+        details.open = collapsedByView[cardKey] !== true;
+      } else if (hasStoredPreferences) {
         details.open = true;
-        mainOpened = true;
+      } else {
+        details.open = order === 0;
       }
+
+      details.addEventListener('toggle', () => {
+        setCardCollapsedPreference(view, cardKey, !details.open);
+      });
 
       card.replaceWith(details);
     });
@@ -391,7 +507,6 @@ import { AetherViewContent } from './views-content.js';
         root._meta.isSaving,
         root._meta.isDirty,
         root._meta.lastSaveAt,
-        root._meta.lastMutationLabel,
       ].join('|'), () => queueRender('hud')),
     );
 
@@ -431,6 +546,10 @@ import { AetherViewContent } from './views-content.js';
   function tick() {
     const now = Date.now();
     let timersChanged = false;
+    let resourcesChanged = false;
+    const beforeHp = state.player.hp;
+    const beforeEnergy = state.player.energy;
+    const beforeStamina = state.player.stamina;
 
     mutate('system/tick', () => {
       const elapsed = clamp((now - state.lastTick) / 1000, 0, document.hidden ? 30 : 5);
@@ -443,13 +562,22 @@ import { AetherViewContent } from './views-content.js';
       state.player.hp = clamp(state.player.hp, 1, ds.maxHp);
       state.player.energy = clamp(state.player.energy, 0, ds.maxEnergy);
       state.player.stamina = clamp(state.player.stamina, 0, ds.maxStamina);
-    }, { source: 'tick' });
+      resourcesChanged = state.player.hp !== beforeHp
+        || state.player.energy !== beforeEnergy
+        || state.player.stamina !== beforeStamina;
+    }, { source: 'tick', markDirty: false });
+
+    if ((resourcesChanged || timersChanged) && !getStoreMeta().isDirty) {
+      setStoreMeta({ isDirty: true, lastSource: 'tick' });
+    }
 
     if (!state.lastSave || now - state.lastSave > 12000) scheduleSave();
 
     if (document.hidden) return;
 
-    queueRender('hud');
+    if (resourcesChanged || timersChanged) {
+      if (!updateLiveHud()) queueRender('hud');
+    }
     updateLiveNodes();
     if (timersChanged) {
       queueRender(['content', 'modal']);
