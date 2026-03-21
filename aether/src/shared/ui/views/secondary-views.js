@@ -278,7 +278,7 @@ export function createSecondaryViews(deps) {
                   return `
                     <div class="glass rounded-2xl p-4 forge-upgrade-card">
                       <div class="text-xs text-slate-300/55 uppercase tracking-[.18em]">${SLOT_NAMES[slot]}</div>
-                      <div class="font-black ${item ? `rarity-${item.rarity}` : 'text-slate-400/80'}">${item ? item.name : 'Vacío'}</div>
+                       <div class="font-black break-words ${item ? `rarity-${item.rarity}` : 'text-slate-400/80'}">${item ? item.name : 'Vacío'}</div>
                       <div class="text-sm text-slate-300/70 mt-1">${item ? `Nivel ${item.level} · Mejora +${item.upgrade || 0}` : 'Equipa algo para mejorarlo.'}</div>
                       <button type="button" class="btn btn-gold mt-3 w-full" ${item ? `onclick="game.upgradeEquipped('${slot}')"` : 'disabled'} ${tooltipAttr('Sube el nivel de mejora de la pieza equipada y aumenta sus estadísticas.')}>⚒️ Mejorar</button>
                     </div>

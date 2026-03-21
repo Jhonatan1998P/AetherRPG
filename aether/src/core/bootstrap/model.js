@@ -1,3 +1,5 @@
+import { createStore } from 'zustand/vanilla';
+import { subscribeWithSelector } from 'zustand/middleware';
 import { createItemsDomain } from '../../features/gameplay/domain/items.js';
 import { createStatsDomain } from '../../features/gameplay/domain/stats.js';
 import { createDefaultsModule } from '../state/defaults.js';
@@ -50,21 +52,11 @@ import { createPersistenceModule } from '../state/persistence.js';
     generateMarket,
   });
 
-  const zustandVanilla = window.zustandVanilla || window.zustand;
-  const zustandMiddleware = window.zustandMiddleware || {};
-  const subscribeWithSelector = typeof zustandMiddleware.subscribeWithSelector === 'function'
-    ? zustandMiddleware.subscribeWithSelector
-    : (creator) => creator;
-
-  if (!zustandVanilla || typeof zustandVanilla.createStore !== 'function') {
-    throw new Error('Zustand vanilla no esta disponible. Verifica la carga de la libreria antes de model.js');
-  }
-
   const stateCore = createStateCore({
     clone,
     statsDomain,
     makeDefaultState,
-    zustandVanilla,
+    createStore,
     subscribeWithSelector,
   });
   const {

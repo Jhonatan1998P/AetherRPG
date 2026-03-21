@@ -3,7 +3,7 @@ export function createStateCore(deps) {
     clone,
     statsDomain,
     makeDefaultState,
-    zustandVanilla,
+    createStore,
     subscribeWithSelector,
   } = deps;
 
@@ -51,7 +51,7 @@ export function createStateCore(deps) {
     statsDomain.invalidateDerivedCache();
   }
 
-  const gameStore = zustandVanilla.createStore(subscribeWithSelector(() => ({
+  const gameStore = createStore(subscribeWithSelector(() => ({
     ...clone(makeDefaultState()),
     _meta: createStoreMeta(),
     actions: {},

@@ -1,7 +1,6 @@
 import { attachSystemActions } from '../actions/system-actions.js';
 import { AetherViewLayout } from './views-layout.js';
 import { AetherViewContent } from './views-content.js';
-import { replaceEmojiIcons } from '../../shared/ui/runtime/ui-helpers.js';
 
 (() => {
   const { STORAGE_KEY, VIEWS, VIEW_META } = window.AetherConfig;
@@ -36,6 +35,12 @@ import { replaceEmojiIcons } from '../../shared/ui/runtime/ui-helpers.js';
   const htmlCache = Object.create(null);
   const dirtyRegions = new Set(Object.keys(REGION_IDS));
   const storeUnsubscribers = [];
+  const tooltip = {
+    el: null,
+    activeTarget: null,
+    hideTimer: 0,
+    frame: 0,
+  };
   let rafId = 0;
   let loopId = 0;
   let saveTimer = 0;
@@ -81,16 +86,83 @@ import { replaceEmojiIcons } from '../../shared/ui/runtime/ui-helpers.js';
     });
   }
 
+  function cardLabelFrom(card, index) {
+    const explicit = (card.getAttribute('data-card-title') || '').trim();
+    if (explicit) return explicit;
+
+    const heading = card.querySelector('.section-title, .font-display.font-extrabold, .font-black, .font-bold, h2, h3, h4');
+    const headingText = heading ? (heading.textContent || '').trim().replace(/\s+/g, ' ') : '';
+    if (headingText) return headingText;
+
+    return `Tarjeta ${index + 1}`;
+  }
+
+  function hydrateCollapsibleCards() {
+    const root = regionEl('content');
+    if (!root) return;
+
+    const cardSelector = '.glass, .glass-strong, .surface-strong, .surface-subtle';
+    const candidates = Array.from(root.querySelectorAll(cardSelector)).filter((el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      if (el.tagName.toLowerCase() === 'details') return false;
+      if (el.closest('.mobile-cta-bar')) return false;
+      if (el.closest('#mobile-nav-root')) return false;
+      if (el.closest('#mobile-sheet-root')) return false;
+
+      return true;
+    });
+
+    let mainOpened = false;
+    candidates.forEach((card, index) => {
+      const details = document.createElement('details');
+
+      Array.from(card.attributes).forEach((attr) => {
+        details.setAttribute(attr.name, attr.value);
+      });
+
+      details.classList.add('card-collapsible');
+
+      const summary = document.createElement('summary');
+      summary.className = 'card-collapsible-summary';
+      summary.setAttribute('role', 'button');
+
+      const label = document.createElement('span');
+      label.className = 'card-collapsible-label';
+      label.textContent = cardLabelFrom(card, index);
+
+      const chevron = document.createElement('span');
+      chevron.className = 'card-collapsible-chevron';
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.textContent = '▾';
+
+      summary.append(label, chevron);
+
+      const body = document.createElement('div');
+      body.className = 'card-collapsible-body';
+      while (card.firstChild) body.appendChild(card.firstChild);
+
+      details.append(summary, body);
+
+      const isPrimaryCard = !mainOpened && (card.classList.contains('rounded-3xl') || index === 0);
+      if (isPrimaryCard) {
+        details.open = true;
+        mainOpened = true;
+      }
+
+      card.replaceWith(details);
+    });
+  }
+
   function flushRender() {
     Object.keys(REGION_IDS).forEach((region) => {
       if (!dirtyRegions.has(region)) return;
       const el = regionEl(region);
       if (!el) return;
-      const rawHtml = renderRegion(region);
-      const html = replaceEmojiIcons(rawHtml);
+      const html = renderRegion(region);
       if (htmlCache[region] !== html) {
         el.innerHTML = html;
         htmlCache[region] = html;
+        if (region === 'content') hydrateCollapsibleCards();
       }
       dirtyRegions.delete(region);
     });
@@ -225,6 +297,89 @@ import { replaceEmojiIcons } from '../../shared/ui/runtime/ui-helpers.js';
     scheduleSave();
   }
 
+  function initTooltips() {
+    const el = document.createElement('div');
+    el.id = 'ui-tooltip';
+    el.className = 'pointer-events-none fixed z-[80] hidden max-w-[290px] rounded-2xl border border-cyan-300/24 bg-slate-950/92 px-3 py-2 text-xs leading-relaxed text-slate-100 backdrop-blur-xl shadow-[0_12px_40px_rgba(2,6,23,.55)] opacity-0 translate-y-1 transition duration-150 ease-out';
+    document.body.appendChild(el);
+    tooltip.el = el;
+
+    function positionNow(target) {
+      if (!target || !tooltip.el || tooltip.el.classList.contains('hidden')) return;
+      const rect = target.getBoundingClientRect();
+      const tooltipRect = tooltip.el.getBoundingClientRect();
+      const top = Math.max(12, rect.top - tooltipRect.height - 10);
+      let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+      left = Math.max(12, Math.min(left, window.innerWidth - tooltipRect.width - 12));
+      tooltip.el.style.top = `${top}px`;
+      tooltip.el.style.left = `${left}px`;
+    }
+
+    function positionTooltip(target = tooltip.activeTarget) {
+      if (!target || !tooltip.el) return;
+      if (tooltip.frame) return;
+      tooltip.frame = window.requestAnimationFrame(() => {
+        tooltip.frame = 0;
+        positionNow(target);
+      });
+    }
+
+    function showTooltip(target) {
+      const text = target && target.getAttribute('data-tooltip');
+      if (!text || !tooltip.el) return;
+      if (tooltip.hideTimer) {
+        clearTimeout(tooltip.hideTimer);
+        tooltip.hideTimer = 0;
+      }
+      tooltip.activeTarget = target;
+      tooltip.el.innerHTML = text;
+      tooltip.el.classList.remove('hidden');
+      window.requestAnimationFrame(() => {
+        if (!tooltip.el) return;
+        tooltip.el.classList.remove('opacity-0', 'translate-y-1');
+      });
+      positionTooltip(target);
+    }
+
+    function hideTooltip(target) {
+      if (!tooltip.activeTarget || !tooltip.el) return;
+      if (target && tooltip.activeTarget !== target && tooltip.activeTarget.contains(target)) return;
+      tooltip.activeTarget = null;
+      tooltip.el.classList.add('opacity-0', 'translate-y-1');
+      tooltip.hideTimer = window.setTimeout(() => {
+        if (!tooltip.el) return;
+        tooltip.el.classList.add('hidden');
+        tooltip.hideTimer = 0;
+      }, 140);
+    }
+
+    document.addEventListener('mouseover', (event) => {
+      const target = event.target.closest('[data-tooltip]');
+      if (target) showTooltip(target);
+    });
+    document.addEventListener('mouseout', (event) => {
+      const target = event.target.closest('[data-tooltip]');
+      if (target) hideTooltip(target);
+    });
+    document.addEventListener('focusin', (event) => {
+      const target = event.target.closest('[data-tooltip]');
+      if (target) showTooltip(target);
+    });
+    document.addEventListener('focusout', (event) => {
+      const target = event.target.closest('[data-tooltip]');
+      if (target) hideTooltip(target);
+    });
+    document.addEventListener('mousemove', () => {
+      if (tooltip.activeTarget) positionTooltip(tooltip.activeTarget);
+    });
+    window.addEventListener('scroll', () => {
+      if (tooltip.activeTarget) positionTooltip(tooltip.activeTarget);
+    }, true);
+    window.addEventListener('resize', () => {
+      if (tooltip.activeTarget) positionTooltip(tooltip.activeTarget);
+    });
+  }
+
   function subscribeRenderBridges() {
     while (storeUnsubscribers.length) {
       const unsub = storeUnsubscribers.pop();
@@ -334,6 +489,7 @@ import { replaceEmojiIcons } from '../../shared/ui/runtime/ui-helpers.js';
   }
 
   function init() {
+    initTooltips();
     loadGame();
     mutate('system/offlineCatchup:init', () => {
       Systems.offlineCatchup();

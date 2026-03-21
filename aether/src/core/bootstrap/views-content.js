@@ -50,7 +50,7 @@ function equippedSlotCard(slot) {
         <div class="min-w-0">
           <div class="text-[11px] uppercase tracking-[.18em] text-slate-300/55">${SLOT_NAMES[slot]}</div>
           ${item
-            ? `<div class="mt-1 flex flex-wrap items-center gap-2"><div class="font-bold leading-snug rarity-${item.rarity}">${item.name}</div>${rarityBadge(item.rarity)}</div>
+             ? `<div class="mt-1 flex flex-wrap items-center gap-2"><div class="font-bold leading-snug break-words rarity-${item.rarity}">${item.name}</div>${rarityBadge(item.rarity)}</div>
                <div class="text-xs text-slate-300/70 mt-1">Nivel ${item.level} · Mejora +${item.upgrade || 0}</div>`
             : '<div class="font-bold mt-1 text-slate-400/80">Vacío</div>'
           }
@@ -200,7 +200,7 @@ function inventoryCards() {
           <div class="glass rounded-2xl p-4 item-card cv-auto inventory-card-pro" ${tooltipAttr(`Objeto de rareza ${rarityName(item.rarity)}. Puntuación ${fmt(item.score)}. ${compare.detail}`)}>
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2"><div class="font-black rarity-${item.rarity} leading-snug">${item.name}</div>${rarityBadge(item.rarity)}</div>
+                <div class="flex flex-wrap items-center gap-2"><div class="font-black rarity-${item.rarity} leading-snug break-words">${item.name}</div>${rarityBadge(item.rarity)}</div>
                 <div class="text-xs text-slate-300/60 mt-1">${SLOT_NAMES[item.slot]} · Nivel ${item.level} · Mejora +${item.upgrade || 0}</div>
               </div>
               <div class="text-right shrink-0">

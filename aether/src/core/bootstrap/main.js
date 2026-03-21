@@ -1,3 +1,4 @@
+import '../../../styles.css';
 import './config.js';
 import './utils.js';
 import './model.js';

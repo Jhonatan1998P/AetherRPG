@@ -144,7 +144,7 @@ export function createMainViews(deps) {
                 <div class="text-3xl font-black mt-1 leading-tight">${state.player.name}</div>
                 <div class="text-sm text-cyan-200/85 mt-1">${state.player.title}</div>
               </div>
-              <div class="grid grid-cols-2 gap-3 min-w-[250px]">
+              <div class="grid grid-cols-2 gap-3 sm:min-w-[250px]">
                 ${htmlStat('Ascensiones', state.player.ascension, '', 'Cantidad de reinicios meta completados para progresión permanente.')}
                 ${htmlStat('Piso más alto', state.player.highestDungeonFloor, '', 'Mayor piso de mazmorra superado hasta ahora.')}
                 ${htmlStat('Inventario', `${state.player.inventory.length}/${maxInventory()}`, '', 'Capacidad actual de la mochila frente a su límite máximo.')}
@@ -152,9 +152,9 @@ export function createMainViews(deps) {
               </div>
             </div>
 
-            <div class="mt-5 space-y-4">
+            <div class="mt-5 space-y-3">
               <div>
-                <div class="text-[11px] uppercase tracking-[.18em] text-slate-300/55 mb-2">Combate</div>
+                <div class="text-[11px] uppercase tracking-[.18em] text-slate-300/55 mb-2">Stats críticas</div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   ${htmlStat('Ataque', fmt(ds.attack))}
                   ${htmlStat('Defensa', fmt(ds.defense))}
@@ -163,15 +163,23 @@ export function createMainViews(deps) {
                 </div>
               </div>
 
-              <div>
-                <div class="text-[11px] uppercase tracking-[.18em] text-slate-300/55 mb-2">Probabilidades y sustain</div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <details class="surface-subtle rounded-2xl p-4">
+                <summary class="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <div class="text-sm font-bold">Stats avanzadas</div>
+                      <div class="text-xs text-slate-300/62 mt-1">Probabilidades y sustain para ajustar build fina.</div>
+                    </div>
+                    <span class="inline-flex items-center rounded-full border border-white/10 bg-white/[.04] px-3 py-1 text-[11px] uppercase tracking-[.16em] text-slate-300/62">Opcional</span>
+                  </div>
+                </summary>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                   ${htmlStat('Golpe crítico', pct(ds.crit), '', 'Probabilidad de infligir daño aumentado en combate.')}
                   ${htmlStat('Esquiva', pct(ds.dodge))}
                   ${htmlStat('Bloqueo', pct(ds.block))}
                   ${htmlStat('Robo de vida', pct(ds.lifesteal), '', 'Porcentaje del daño que regresa como curación.')}
                 </div>
-              </div>
+              </details>
             </div>
           </section>
 
