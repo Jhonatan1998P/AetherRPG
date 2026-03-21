@@ -1261,6 +1261,10 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     return result;
   }
 
+  function resourceOffer(kind) {
+    return economyDomain.resourceOffer(state, kind);
+  }
+
   function previewCraftItem(slot, tier = 'basic') {
     return economyDomain.previewCraftItem(state, slot, tier);
   }
@@ -1758,6 +1762,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     toggleActiveSkill,
     refreshMarket,
     buyMarketItem,
+    resourceOffer,
     buyResource,
     previewCraftItem,
     craftItem,

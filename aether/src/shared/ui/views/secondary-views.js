@@ -31,6 +31,7 @@ export function createSecondaryViews(deps) {
     previewReforgeItem,
     previewTranscendItem,
     previewStabilizeItem,
+    resourceOffer,
     getPityStatus,
     getForgePityStatus,
     getForgeState,
@@ -177,6 +178,17 @@ export function createSecondaryViews(deps) {
     const bestVisible = [...state.market.items].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
     const affordableCount = state.market.items.filter((item) => (item.price || 0) <= state.player.gold).length;
     const upgradeCount = state.market.items.filter((item) => compareAgainstEquipped(item).tone === 'success').length;
+    const supportOffers = ['potion', 'key', 'essence', 'catalyst', 'sigil', 'food']
+      .map((kind) => resourceOffer(kind))
+      .filter(Boolean);
+    const supportMeta = {
+      potion: { icon: '🧪', tone: 'btn-success', desc: 'Recuperación directa para sostener progreso en combate.' },
+      key: { icon: '🗝️', tone: 'btn-violet', desc: 'Abre acceso a rutas de mazmorra y progresión de piso.' },
+      essence: { icon: '✨', tone: 'btn-primary', desc: 'Material base para mejoras y rutas de forja.' },
+      catalyst: { icon: '🧿', tone: '', desc: 'Consumible premium para forja profunda y trascendencia.' },
+      sigil: { icon: '🔷', tone: '', desc: 'Recurso clave para acciones avanzadas de equipo.' },
+      food: { icon: '🍖', tone: '', desc: 'Soporte para trabajo, mascota y economía de ciclo.' },
+    };
 
     return `
       <div class="space-y-5">
@@ -261,12 +273,12 @@ export function createSecondaryViews(deps) {
             <div class="glass rounded-3xl p-5">
               ${sectionHeader('Soporte', 'Consumibles útiles')}
               <div class="grid gap-2">
-                <button type="button" class="btn btn-success" onclick="game.buyResource('potion')" ${tooltipAttr('Compra una poción para curarte más tarde por 120 de oro.')}>🧪 Poción · 120 oro</button>
-                <button type="button" class="btn btn-violet" onclick="game.buyResource('key')" ${tooltipAttr('Compra una llave para acceder a mazmorras por 180 de oro.')}>🗝️ Llave · 180 oro</button>
-                <button type="button" class="btn btn-primary" onclick="game.buyResource('essence')" ${tooltipAttr('Compra esencia para forja y progresión premium por 140 de oro.')}>✨ Esencia · 140 oro</button>
-                <button type="button" class="btn" onclick="game.buyResource('catalyst')" ${tooltipAttr('Compra un catalizador para rutas de forja profunda por 320 de oro.')}>🧿 Catalizador · 320 oro</button>
-                <button type="button" class="btn" onclick="game.buyResource('sigil')" ${tooltipAttr('Compra un sigilo para rutas de trascendencia por 260 de oro.')}>🔷 Sigilo · 260 oro</button>
-                <button type="button" class="btn" onclick="game.buyResource('food')" ${tooltipAttr('Compra comida para apoyar trabajos y mascotas por 65 de oro.')}>🍖 Comida x2 · 65 oro</button>
+                ${supportOffers.map((entry) => {
+                  const meta = supportMeta[entry.kind] || { icon: '•', tone: '', desc: 'Consumible de soporte.' };
+                  const qty = Object.values(entry.reward || {}).reduce((sumValue, value) => sumValue + Number(value || 0), 0);
+                  const label = qty > 1 ? `${entry.label} x${qty}` : entry.label;
+                  return `<button type="button" class="btn ${meta.tone}" onclick="game.buyResource('${entry.kind}')" ${tooltipAttr(`${meta.desc} Precio dinámico según nivel y poder actual: ${fmt(entry.price)} de oro.`)}>${meta.icon} ${label} · ${fmt(entry.price)} oro</button>`;
+                }).join('')}
               </div>
             </div>
           </aside>

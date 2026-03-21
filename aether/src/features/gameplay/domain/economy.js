@@ -65,6 +65,105 @@ const SCARCITY_MULT = {
   ascendant: 8.4,
 };
 
+const RESOURCE_CATALOG_BASE = {
+  potion: {
+    basePrice: 120,
+    reward: { potions: 1 },
+    label: 'Poción',
+    priceBias: 1.02,
+    levelSlope: 0.018,
+    powerPivot: 260,
+    powerCap: 1.5,
+    powerSlope: 0.24,
+    stageMult: { early: 0.92, mid: 1.0, late: 1.08 },
+    minMult: 0.84,
+    maxMult: 3.2,
+    spendBias: 0.5,
+    spendBandMin: 0.09,
+    spendBandMax: 0.11,
+  },
+  key: {
+    basePrice: 180,
+    reward: { keys: 1 },
+    label: 'Llave de mazmorra',
+    priceBias: 1.05,
+    levelSlope: 0.024,
+    powerPivot: 220,
+    powerCap: 1.7,
+    powerSlope: 0.28,
+    stageMult: { early: 0.98, mid: 1.06, late: 1.16 },
+    minMult: 0.92,
+    maxMult: 4.4,
+    spendBias: 0.85,
+    spendBandMin: 0.15,
+    spendBandMax: 0.2,
+  },
+  essence: {
+    basePrice: 140,
+    reward: { essence: 1 },
+    label: 'Esencia',
+    priceBias: 1.02,
+    levelSlope: 0.02,
+    powerPivot: 230,
+    powerCap: 1.6,
+    powerSlope: 0.26,
+    stageMult: { early: 0.94, mid: 1.02, late: 1.1 },
+    minMult: 0.88,
+    maxMult: 3.8,
+    spendBias: 0.55,
+    spendBandMin: 0.1,
+    spendBandMax: 0.14,
+  },
+  catalyst: {
+    basePrice: 320,
+    reward: { catalysts: 1 },
+    label: 'Catalizador',
+    priceBias: 1.1,
+    levelSlope: 0.026,
+    powerPivot: 210,
+    powerCap: 1.8,
+    powerSlope: 0.3,
+    stageMult: { early: 1.0, mid: 1.1, late: 1.24 },
+    minMult: 0.96,
+    maxMult: 5.3,
+    spendBias: 1,
+    spendBandMin: 0.15,
+    spendBandMax: 0.2,
+  },
+  food: {
+    basePrice: 65,
+    reward: { food: 2 },
+    label: 'Comida',
+    priceBias: 0.95,
+    levelSlope: 0.014,
+    powerPivot: 300,
+    powerCap: 1.4,
+    powerSlope: 0.2,
+    stageMult: { early: 0.9, mid: 0.98, late: 1.05 },
+    minMult: 0.78,
+    maxMult: 2.6,
+    spendBias: 0.2,
+    spendBandMin: 0.08,
+    spendBandMax: 0.12,
+  },
+  sigil: {
+    basePrice: 260,
+    reward: { sigils: 1 },
+    label: 'Sigilo',
+    priceBias: 1.08,
+    levelSlope: 0.025,
+    powerPivot: 215,
+    powerCap: 1.75,
+    powerSlope: 0.29,
+    stageMult: { early: 0.98, mid: 1.08, late: 1.2 },
+    minMult: 0.94,
+    maxMult: 4.9,
+    spendBias: 0.9,
+    spendBandMin: 0.15,
+    spendBandMax: 0.2,
+  },
+};
+
 export function createEconomyDomain(deps) {
   const {
     FORGE_SCHOOLS,
@@ -661,17 +760,63 @@ export function createEconomyDomain(deps) {
     addJournal('🛍️', `Compras ${item.name} por ${item.price} de oro.`);
   }
 
+  function playerPowerIndex(state) {
+    const p = state && state.player ? state.player : {};
+    const t = p.training || {};
+    const level = Math.max(1, Number(p.level || 1));
+    const ascension = Math.max(0, Number(p.ascension || 0));
+    const floor = Math.max(1, Number(p.highestDungeonFloor || 1));
+    const trainingPower = Number(t.strength || 0) * 1.2
+      + Number(t.endurance || 0) * 1.5
+      + Number(t.agility || 0) * 0.8
+      + Number(t.discipline || 0) * 0.9;
+    const progressionPower = level * 1.75 + ascension * 12 + floor * 1.35;
+    return progressionPower + trainingPower;
+  }
+
+  function targetGoldPerHourForState(state) {
+    const level = Math.max(1, Number(state.player.level || 1));
+    const ascension = Math.max(0, Number(state.player.ascension || 0));
+    return Math.max(900, Math.round(1600 + level * 170 + ascension * 280));
+  }
+
+  function resourceOffer(state, kind) {
+    const base = RESOURCE_CATALOG_BASE[kind];
+    if (!base) return null;
+    const level = Math.max(1, Number(state.player.level || 1));
+    const power = playerPowerIndex(state);
+    const levelScale = 1 + Math.max(0, level - 1) * Number(base.levelSlope || 0.02);
+    const powerScale = 1 + clamp(
+      power / Math.max(1, Number(base.powerPivot || 220)),
+      0,
+      Number(base.powerCap || 1.6),
+    ) * Number(base.powerSlope || 0.24);
+    const stage = level < 15 ? 'early' : level < 35 ? 'mid' : 'late';
+    const stageScale = Number(base.stageMult && base.stageMult[stage] ? base.stageMult[stage] : 1);
+    const rawPrice = base.basePrice * levelScale * powerScale * stageScale * (base.priceBias || 1);
+    const minPrice = base.basePrice * Number(base.minMult || 0.85);
+    const maxPrice = base.basePrice * Number(base.maxMult || 4.5);
+    const scaledPrice = clamp(rawPrice, minPrice, maxPrice);
+    const targetGoldHour = targetGoldPerHourForState(state);
+    const spendBias = clamp(Number(base.spendBias || 0), 0, 1);
+    const bandMin = clamp(Number(base.spendBandMin || 0.15), 0.04, 0.5);
+    const bandMax = clamp(Number(base.spendBandMax || 0.2), bandMin, 0.6);
+    const targetSpendRatio = bandMin + spendBias * (bandMax - bandMin);
+    const ratioFloor = targetGoldHour * bandMin;
+    const ratioCeil = targetGoldHour * bandMax;
+    const anchoredPrice = scaledPrice * 0.32 + (targetGoldHour * targetSpendRatio) * 0.68;
+    const price = Math.max(1, Math.round(clamp(anchoredPrice, ratioFloor, ratioCeil)));
+    return {
+      kind,
+      label: base.label,
+      price,
+      reward: clone(base.reward),
+    };
+  }
+
   function buyResource(state, kind, ctx) {
     const { toast, grantRewards } = ctx;
-    const catalog = {
-      potion: { price: 120, reward: { potions: 1 }, label: 'Poción' },
-      key: { price: 180, reward: { keys: 1 }, label: 'Llave de mazmorra' },
-      essence: { price: 140, reward: { essence: 1 }, label: 'Esencia' },
-      catalyst: { price: 320, reward: { catalysts: 1 }, label: 'Catalizador' },
-      food: { price: 65, reward: { food: 2 }, label: 'Comida' },
-      sigil: { price: 260, reward: { sigils: 1 }, label: 'Sigilo' },
-    };
-    const entry = catalog[kind];
+    const entry = resourceOffer(state, kind);
     if (!entry) return;
     if (state.player.gold < entry.price) {
       toast('Oro insuficiente', 'danger');
@@ -1564,6 +1709,7 @@ export function createEconomyDomain(deps) {
     marketRefreshCost,
     refreshMarket,
     buyMarketItem,
+    resourceOffer,
     buyResource,
     previewCraftItem,
     craftItem,

@@ -39,9 +39,25 @@ export function createActivitiesDomain(deps) {
 
   function passiveRegen(state, seconds, getDerivedStats) {
     const ds = getDerivedStats();
-    const hpRegen = ds.maxHp * (0.0033 + ds.regenPct * 0.01) * seconds;
-    const energyRegen = (0.48 + state.player.training.discipline * 0.02 + state.player.relics.momentum * 0.04) * seconds;
-    const staminaRegen = (0.028 + state.player.relics.momentum * 0.005) * seconds;
+    const hours = Math.max(0, Number(seconds || 0)) / 3600;
+    const level = Math.max(1, Number(state.player.level || 1));
+    const strength = Math.max(0, Number(state.player.training && state.player.training.strength || 0));
+    const endurance = Math.max(0, Number(state.player.training && state.player.training.endurance || 0));
+    const weightedAttribute = strength * 0.3 + endurance * 0.7;
+    const attributeFactor = 1 + Math.log1p(weightedAttribute) * 0.08;
+    const stageFactor = level < 15
+      ? 0.9
+      : level < 35
+        ? 1.03
+        : 1.08;
+
+    const hpPerHourPct = clamp((0.1 + ds.regenPct * 0.14) * attributeFactor * stageFactor, 0.06, 0.48);
+    const energyPerHourPct = clamp((0.12 + state.player.relics.momentum * 0.006) * attributeFactor * stageFactor, 0.07, 0.38);
+    const staminaPerHourPct = clamp((0.14 + state.player.relics.momentum * 0.007) * attributeFactor * stageFactor, 0.08, 0.5);
+
+    const hpRegen = ds.maxHp * hpPerHourPct * hours;
+    const energyRegen = ds.maxEnergy * energyPerHourPct * hours;
+    const staminaRegen = ds.maxStamina * staminaPerHourPct * hours;
     state.player.hp = clamp(state.player.hp + hpRegen, 1, ds.maxHp);
     state.player.energy = clamp(state.player.energy + energyRegen, 0, ds.maxEnergy);
     state.player.stamina = clamp(state.player.stamina + staminaRegen, 0, ds.maxStamina);
