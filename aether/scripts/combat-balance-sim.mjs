@@ -62,9 +62,9 @@ const combatDomain = createCombatDomain({
 });
 
 const TARGETS = {
-  normal: { winrateMin: 0.6, winrateMax: 0.72, turnsMin: 5, turnsMax: 8 },
-  elite: { winrateMin: 0.45, winrateMax: 0.6, turnsMin: 7, turnsMax: 11 },
-  boss: { winrateMin: 0.35, winrateMax: 0.52, turnsMin: 10, turnsMax: 16 },
+  normal: { winrateMin: 0.6, winrateMax: 0.65, turnsMin: 6, turnsMax: Infinity },
+  elite: { winrateMin: 0.4, winrateMax: 0.55, turnsMin: 8, turnsMax: Infinity },
+  boss: { winrateMin: 0.3, winrateMax: 0.4, turnsMin: 10, turnsMax: Infinity },
 };
 
 const MODE_BY_KIND = {
@@ -187,7 +187,7 @@ function statusForResult(result) {
   if (result.winrate < target.winrateMin) notes.push('winrate bajo');
   if (result.winrate > target.winrateMax) notes.push('winrate alto');
   if (result.avgTurns < target.turnsMin) notes.push('combate corto');
-  if (result.avgTurns > target.turnsMax) notes.push('combate largo');
+  if (Number.isFinite(target.turnsMax) && result.avgTurns > target.turnsMax) notes.push('combate largo');
   return {
     ok: notes.length === 0,
     notes,
@@ -235,9 +235,9 @@ function toMarkdown(results, fights) {
     '',
     '## Bandas objetivo usadas',
     '',
-    '- normal: winrate 60%-72%, 5-8 turnos',
-    '- elite: winrate 45%-60%, 7-11 turnos',
-    '- boss: winrate 35%-52%, 10-16 turnos',
+    '- normal: winrate 60%-65%, turnos >= 6',
+    '- elite: winrate 40%-55%, turnos >= 8',
+    '- boss: winrate 30%-40%, turnos >= 10',
     '',
   ].join('\n');
 }

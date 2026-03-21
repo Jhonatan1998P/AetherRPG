@@ -299,10 +299,10 @@ Estado actualizado al 2026-03-21:
 - Implementacion de fases 1-8 completada a nivel de codigo.
 - QA de balance iterativo ejecutado en `aether/docs/REPORTE_BALANCE_COMBATE_SIMULADO.md`.
 - Resultado actual post-retuning (simulacion on-level):
-  - normal: winrate medio ~69.0% (en banda), turnos ~8.14 (muy cerca del objetivo 5-8)
-  - elite: winrate medio ~54.2% (en banda), turnos ~9.99 (en banda)
-  - boss: winrate medio ~43.5% (en banda), turnos ~13.07 (en banda)
-- Pendiente: reducir dispersion por zona en normal/elite para cerrar Go/No-Go con mayor estabilidad inter-zona.
+  - normal: winrate medio ~63.0% (objetivo solicitado 60-65), turnos ~8.38 (>= 6)
+  - elite: winrate medio ~53.9% (objetivo solicitado 40-55), turnos ~9.89 (>= 8)
+  - boss: winrate medio ~36.2% (objetivo solicitado 30-40), turnos ~12.69 (>= 10)
+- Estado de objetivo solicitado: cumplido en simulacion agregada (220 iteraciones por escenario).
 
 ## 0) Preparacion
 

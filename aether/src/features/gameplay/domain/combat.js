@@ -490,10 +490,10 @@ export function createCombatDomain(deps) {
     const weights = archetypeDef.statWeights || {};
     const mods = enemyArchetypeMods(archetype);
     const kindProfile = kind === 'boss'
-      ? { attack: 0.78, defense: 0.96, speed: 0.9, hp: 1.06 }
+      ? { attack: 0.81, defense: 0.98, speed: 0.9, hp: 1.08 }
       : kind === 'elite'
         ? { attack: 0.94, defense: 0.9, speed: 0.95, hp: 0.86 }
-        : { attack: 1.1, defense: 0.84, speed: 0.96, hp: 0.74 };
+        : { attack: 1.12, defense: 0.87, speed: 0.96, hp: 0.78 };
 
     const attack = (10 + enemyLevel * 2.5)
       * (0.72 + budgetPressure * 0.38)
