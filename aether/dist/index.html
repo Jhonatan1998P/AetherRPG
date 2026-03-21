@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Aether Arena — PBBG RPG Glassmorphism</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Orbitron:wght@500;700;800;900&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            display: ['Orbitron', 'Sora', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+          },
+          boxShadow: {
+            neon: '0 0 0 1px rgba(34,211,238,.20), 0 0 24px rgba(34,211,238,.24), 0 18px 60px rgba(59,130,246,.20)',
+            violet: '0 0 0 1px rgba(168,85,247,.22), 0 0 28px rgba(168,85,247,.20), 0 20px 60px rgba(88,28,135,.22)',
+            gold: '0 0 0 1px rgba(250,204,21,.24), 0 0 24px rgba(250,204,21,.18), 0 18px 56px rgba(180,83,9,.22)',
+            pane: '0 20px 80px rgba(2,6,23,.52)',
+            insetglass: 'inset 0 1px 0 rgba(255,255,255,.14), inset 0 -1px 0 rgba(255,255,255,.03)'
+          },
+          backdropBlur: {
+            xs: '2px'
+          },
+          backgroundImage: {
+            'hud-grid': 'linear-gradient(rgba(148,163,184,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.06) 1px, transparent 1px)',
+            'panel-sheen': 'linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.04) 42%, rgba(34,211,238,.05) 100%)'
+          }
+        }
+      }
+    }
+  </script>
+    <!-- Removed external CSS; all styling will use Tailwind classes exclusively -->
+
+    <!-- Runtime helper to map legacy class names to Tailwind utility classes. This adds Tailwind
+         classes on elements matching certain class names so that we can style the interface
+         without relying on a separate CSS file. It runs after the DOM has loaded and also
+         watches for future mutations to apply classes to dynamically inserted elements. -->
+    <script>
+      // Mapping from legacy class names to Tailwind classes. Keys can include a space to denote
+      // modifier classes (e.g. "btn primary" maps only when an element has both classes).
+      const TAILWIND_CLASS_MAP = {
+        'glass': 'bg-slate-950/58 bg-panel-sheen border border-white/12 backdrop-blur-2xl shadow-pane shadow-insetglass supports-[backdrop-filter]:bg-slate-950/42',
+        'glass-strong': 'bg-slate-950/72 bg-panel-sheen border border-cyan-300/12 backdrop-blur-[22px] shadow-pane shadow-insetglass supports-[backdrop-filter]:bg-slate-950/54',
+        'stat-pill': 'rounded-2xl border border-white/10 bg-white/[0.045] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,.06),0_10px_30px_rgba(2,6,23,.18)]',
+        'btn': 'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-bold border text-white transition duration-200 transform hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed select-none backdrop-blur-md',
+        'btn-primary': 'border-cyan-300/35 bg-gradient-to-br from-cyan-400/28 via-sky-500/24 to-blue-600/26 shadow-neon hover:shadow-[0_0_0_1px_rgba(103,232,249,.32),0_0_28px_rgba(34,211,238,.28),0_18px_60px_rgba(14,116,144,.24)]',
+        'btn-violet': 'border-fuchsia-300/35 bg-gradient-to-br from-fuchsia-500/26 via-violet-500/24 to-purple-700/26 shadow-violet hover:shadow-[0_0_0_1px_rgba(216,180,254,.32),0_0_30px_rgba(168,85,247,.30),0_18px_60px_rgba(88,28,135,.26)]',
+        'btn-gold': 'border-amber-300/40 bg-gradient-to-br from-amber-400/30 via-yellow-400/22 to-orange-600/24 shadow-gold hover:shadow-[0_0_0_1px_rgba(252,211,77,.35),0_0_30px_rgba(250,204,21,.24),0_18px_60px_rgba(146,64,14,.26)]',
+        'btn-danger': 'border-rose-300/35 bg-gradient-to-br from-rose-500/28 via-pink-500/22 to-red-700/24 shadow-[0_0_0_1px_rgba(251,113,133,.18),0_0_24px_rgba(244,63,94,.16),0_18px_56px_rgba(127,29,29,.26)] hover:shadow-[0_0_0_1px_rgba(251,113,133,.30),0_0_28px_rgba(244,63,94,.24),0_18px_60px_rgba(127,29,29,.28)]',
+        'btn-success': 'border-emerald-300/35 bg-gradient-to-br from-emerald-400/28 via-green-500/20 to-teal-700/24 shadow-[0_0_0_1px_rgba(110,231,183,.18),0_0_24px_rgba(16,185,129,.18),0_18px_56px_rgba(6,78,59,.28)] hover:shadow-[0_0_0_1px_rgba(110,231,183,.30),0_0_28px_rgba(16,185,129,.24),0_18px_60px_rgba(6,78,59,.30)]',
+        'nav-link': 'group flex items-center gap-3 w-full rounded-2xl px-4 py-3 border border-white/8 bg-white/[0.035] backdrop-blur-md transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.07] hover:border-cyan-300/18',
+        'nav-link active': 'bg-gradient-to-br from-cyan-400/14 via-sky-500/10 to-violet-500/12 border-cyan-300/22 shadow-neon',
+        'mobile-nav': 'fixed inset-x-3 bottom-3 z-40 rounded-[1.65rem] border border-cyan-300/15 bg-slate-950/78 backdrop-blur-2xl shadow-pane shadow-insetglass',
+        'mobile-nav-grid': 'grid grid-cols-5 gap-2 p-2 pb-[calc(.55rem+env(safe-area-inset-bottom,0px))] items-stretch',
+        'mobile-nav-btn': 'relative flex flex-col items-center justify-center gap-2 w-full min-h-[76px] rounded-[1.2rem] px-3 py-3 border border-white/8 bg-white/[0.035] text-slate-100 transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:border-cyan-300/18',
+        'mobile-nav-btn active': 'bg-gradient-to-b from-cyan-400/16 via-sky-500/10 to-violet-500/12 border-cyan-300/28 shadow-neon',
+        'nav-icon': 'inline-flex h-5 w-5 items-center justify-center text-cyan-100 drop-shadow-[0_0_8px_rgba(34,211,238,.25)] [&_svg]:h-5 [&_svg]:w-5 [&_svg]:stroke-[1.9]',
+        'nav-label': 'block text-[10px] font-semibold leading-none tracking-[.02em] text-slate-200',
+        'status-chip': 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[.12em] bg-white/[0.06] border border-white/12 text-slate-200/90 backdrop-blur-md',
+        'status-chip success': 'bg-emerald-400/12 border-emerald-300/22 text-emerald-200',
+        'status-chip warning': 'bg-amber-400/12 border-amber-300/22 text-amber-200',
+        'status-chip danger': 'bg-rose-400/12 border-rose-300/22 text-rose-200',
+        'surface-muted': 'bg-white/[0.035] border border-white/8 backdrop-blur-md',
+        'surface-subtle': 'bg-white/[0.028] border border-white/6 backdrop-blur-md',
+        'surface-strong': 'bg-gradient-to-br from-white/[0.09] via-white/[0.05] to-cyan-400/[0.03] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_16px_44px_rgba(2,6,23,.26)] backdrop-blur-lg',
+        'section-eyebrow': 'text-[11px] uppercase tracking-[.22em] text-cyan-200/65',
+        'section-title': 'text-xl sm:text-2xl font-display font-extrabold tracking-[0.01em] text-white',
+        'empty-state': 'p-4 rounded-2xl border border-dashed border-cyan-300/18 bg-white/[0.035] text-slate-300/80 backdrop-blur-md',
+        'kpi-rail': 'grid gap-3 grid-cols-2 sm:grid-cols-4',
+        'mobile-sheet-title': 'text-[11px] uppercase tracking-[.22em] text-cyan-200/55 mb-2 pl-1',
+        'view-links': 'flex flex-wrap gap-2',
+        'hero-actions': 'grid gap-3 sm:grid-cols-2',
+        'mobile-cta-bar': 'sticky bottom-24 z-20',
+        'inventory-actions': 'grid grid-cols-2 gap-2',
+        'view-chip': 'inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-white/8 bg-white/[0.04] text-sm font-semibold text-slate-100 transition duration-200 hover:bg-white/[0.08] hover:border-cyan-300/18',
+        'view-chip active': 'bg-gradient-to-br from-cyan-400/18 via-sky-500/12 to-violet-500/14 border-cyan-300/24 shadow-neon',
+        'filter-pill': 'inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-semibold text-slate-200 backdrop-blur-md hover:border-cyan-300/18 hover:bg-white/[0.08]',
+        'tab-btn': 'border-cyan-300/20',
+        'tab-btn active': 'bg-gradient-to-br from-cyan-400/18 via-sky-500/12 to-violet-500/12 border-cyan-300/28 shadow-neon',
+        'filters-row': 'flex flex-wrap gap-2',
+        'stack-compact': 'space-y-3',
+        'ring': 'ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,.08)]',
+        'item-card': 'transition duration-200 hover:-translate-y-1 hover:shadow-[0_18px_50px_rgba(8,15,40,.35)]',
+        'inventory-card-pro': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-cyan-300/35 before:to-transparent',
+        'market-card': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-fuchsia-300/35 before:to-transparent',
+        'forge-recipe-card': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-amber-300/35 before:to-transparent',
+        'forge-upgrade-card': 'relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-emerald-300/35 before:to-transparent',
+        'history-entry': 'relative overflow-hidden border border-white/8 hover:border-cyan-300/16 hover:bg-white/[0.055]',
+        'elite-card': 'bg-gradient-to-br from-violet-400/14 via-fuchsia-500/10 to-slate-900/20 border border-fuchsia-300/16',
+        'reward-card': 'bg-gradient-to-br from-amber-300/14 via-orange-400/10 to-slate-900/20 border border-amber-300/16',
+        'market-meta': 'flex items-center justify-between gap-3',
+        'mobile-sheet-group': 'rounded-2xl border border-white/8 bg-white/[0.03] p-3 backdrop-blur-md',
+        'bar': 'w-full h-3 rounded-full overflow-hidden border border-white/8 bg-slate-900/70 shadow-[inset_0_2px_10px_rgba(0,0,0,.28)]',
+        'cv-auto': 'min-h-[1px]',
+        'rarity-common': 'text-slate-200',
+        'rarity-uncommon': 'text-emerald-300',
+        'rarity-rare': 'text-sky-300',
+        'rarity-epic': 'text-violet-300',
+        'rarity-legendary': 'text-amber-300',
+        'rarity-mythic': 'text-fuchsia-300 drop-shadow-[0_0_12px_rgba(232,121,249,.34)]'
+      };
+      /**
+       * Apply Tailwind classes to elements based on the legacy class names defined in the map.
+       * If the map key contains a space (e.g. "btn primary"), it will only match elements
+       * that contain both classes. This function is idempotent and can be called multiple times.
+       */
+      function applyTailwindClasses(root = document.body) {
+        Object.entries(TAILWIND_CLASS_MAP).forEach(([key, tw]) => {
+          const parts = key.split(' ');
+          // Build selector: require all parts
+          const selector = parts.map(part => '.' + part).join('');
+          root.querySelectorAll(selector).forEach(el => {
+            tw.split(/\s+/).forEach(cls => {
+              if (!el.classList.contains(cls)) el.classList.add(cls);
+            });
+          });
+        });
+      }
+      document.addEventListener('DOMContentLoaded', () => {
+        applyTailwindClasses();
+        // Observe future DOM changes and reapply classes to new nodes
+        const observer = new MutationObserver(mutations => {
+          mutations.forEach(m => {
+            m.addedNodes.forEach(node => {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                applyTailwindClasses(node);
+              }
+            });
+          });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        const tooltipEl = document.createElement('div');
+        tooltipEl.id = 'ui-tooltip';
+        tooltipEl.className = 'pointer-events-none fixed z-[80] hidden max-w-[280px] rounded-2xl border border-cyan-300/20 bg-slate-950/88 px-3 py-2 text-xs leading-relaxed text-slate-100 backdrop-blur-xl shadow-[0_12px_40px_rgba(2,6,23,.55)]';
+        document.body.appendChild(tooltipEl);
+
+        let activeTooltipTarget = null;
+
+        function showTooltip(target) {
+          const text = target && target.getAttribute('data-tooltip');
+          if (!text) return;
+          activeTooltipTarget = target;
+          tooltipEl.innerHTML = text;
+          tooltipEl.classList.remove('hidden');
+          positionTooltip(target);
+        }
+
+        function hideTooltip(target) {
+          if (!activeTooltipTarget || (target && activeTooltipTarget !== target && activeTooltipTarget.contains(target))) return;
+          activeTooltipTarget = null;
+          tooltipEl.classList.add('hidden');
+        }
+
+        function positionTooltip(target) {
+          if (!target || tooltipEl.classList.contains('hidden')) return;
+          const rect = target.getBoundingClientRect();
+          const tooltipRect = tooltipEl.getBoundingClientRect();
+          const top = Math.max(12, rect.top - tooltipRect.height - 10);
+          let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+          left = Math.max(12, Math.min(left, window.innerWidth - tooltipRect.width - 12));
+          tooltipEl.style.top = `${top}px`;
+          tooltipEl.style.left = `${left}px`;
+        }
+
+        document.addEventListener('mouseover', (event) => {
+          const target = event.target.closest('[data-tooltip]');
+          if (target) showTooltip(target);
+        });
+        document.addEventListener('mouseout', (event) => {
+          const target = event.target.closest('[data-tooltip]');
+          if (target) hideTooltip(target);
+        });
+        document.addEventListener('focusin', (event) => {
+          const target = event.target.closest('[data-tooltip]');
+          if (target) showTooltip(target);
+        });
+        document.addEventListener('focusout', (event) => {
+          const target = event.target.closest('[data-tooltip]');
+          if (target) hideTooltip(target);
+        });
+        document.addEventListener('mousemove', () => {
+          if (activeTooltipTarget) positionTooltip(activeTooltipTarget);
+        });
+        window.addEventListener('scroll', () => {
+          if (activeTooltipTarget) positionTooltip(activeTooltipTarget);
+        }, true);
+        window.addEventListener('resize', () => {
+          if (activeTooltipTarget) positionTooltip(activeTooltipTarget);
+        });
+      });
+    </script>
+
+  <script type="module" crossorigin src="/assets/index-BW7Uzbh6.js"></script>
+</head>
+<body class="relative min-h-screen overflow-x-hidden bg-[#040712] text-slate-100 font-sans tracking-[0.01em] antialiased selection:bg-cyan-400/25 selection:text-white">
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,.14),transparent_28%),radial-gradient(circle_at_85%_12%,rgba(168,85,247,.16),transparent_24%),radial-gradient(circle_at_50%_110%,rgba(250,204,21,.08),transparent_26%),linear-gradient(135deg,#050816_0%,#070d1c_36%,#0a1022_100%)]"></div>
+    <div class="absolute inset-0 bg-hud-grid bg-[length:42px_42px] opacity-[0.08]"></div>
+    <div class="absolute -left-24 top-16 h-72 w-72 rounded-full bg-cyan-400/16 blur-3xl"></div>
+    <div class="absolute right-[-3rem] top-28 h-80 w-80 rounded-full bg-violet-500/14 blur-3xl"></div>
+    <div class="absolute bottom-[-4rem] left-1/3 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl"></div>
+    <div class="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-cyan-300/[0.03] to-transparent"></div>
+  </div>
+  <div id="page-shell" class="relative z-10 max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 pb-28 md:pb-8">
+    <header id="hud" class="mb-5"></header>
+
+    <div class="grid grid-cols-1 xl:grid-cols-[360px,minmax(0,1fr)] gap-5 items-start">
+      <aside id="desktop-nav" class="hidden xl:block min-w-0"></aside>
+
+      <main class="min-w-0">
+        <section id="page-view" class="min-w-0"></section>
+      </main>
+    </div>
+  </div>
+
+  <div id="mobile-nav-root" class="md:hidden"></div>
+  <div id="mobile-sheet-root" class="md:hidden"></div>
+  <div id="modal-root"></div>
+  <div id="toast-root" class="fixed top-4 right-4 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+  <script src="https://unpkg.com/zustand@4.5.7/umd/vanilla.production.js"></script>
+  <script src="https://unpkg.com/zustand@4.5.7/umd/middleware.production.js"></script>
+</body>
+</html>
