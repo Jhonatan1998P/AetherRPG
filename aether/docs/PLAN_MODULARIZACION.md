@@ -124,59 +124,70 @@ src/
 
 ### Fase 1 - Separar `config.js` por responsabilidad
 
-- [ ] Extraer datos de juego (`ITEM_BASES`, `ZONES`, `JOBS`, `PETS`, `SKILLS`, `ACHIEVEMENTS`) a `src/content/game/*`.
-- [ ] Extraer metadatos de vistas/navegacion a `src/content/ui/*`.
-- [ ] Mantener un agregador temporal que siga exponiendo `window.AetherConfig` sin romper llamadas existentes.
+- [x] Extraer datos de juego (`ITEM_BASES`, `ZONES`, `JOBS`, `PETS`, `SKILLS`, `ACHIEVEMENTS`) a `src/content/game/*`.
+- [x] Extraer metadatos de vistas/navegacion a `src/content/ui/*`.
+- [x] Mantener un agregador temporal que siga exponiendo `window.AetherConfig` sin romper llamadas existentes.
 
 ### Fase 2 - Extraer dominio puro desde `model.js`
 
-- [ ] Mover logica de items (factory/scaling/scoring/market) a `src/domain/items/*`.
-- [ ] Mover calculo de stats derivadas y bonuses a `src/domain/stats/*`.
-- [ ] Mantener `model.js` como fachada de estado + persistencia durante la transicion.
-- [ ] Eliminar dependencias de `model` hacia UI/systems (sin toasts/journal directos).
+- [x] Mover logica de items (factory/scaling/scoring/market) a `src/domain/items/*`.
+- [x] Mover calculo de stats derivadas y bonuses a `src/domain/stats/*`.
+- [x] Mantener `model.js` como fachada de estado + persistencia durante la transicion.
+- [x] Eliminar dependencias de `model` hacia UI/systems (sin toasts/journal directos).
 
 ### Fase 3 - Modularizar combate de `systems.js`
 
-- [ ] Extraer `enemyArchetypeMods`, `makeEnemy`, `performHit`, `runCombat` y funciones relacionadas a `src/domain/combat/*`.
-- [ ] Dejar wrappers en `AetherSystems` para mantener compatibilidad de API.
-- [ ] Hacer que el motor de combate devuelva resultados/eventos, no efectos UI directos.
+- [x] Extraer `enemyArchetypeMods`, `makeEnemy`, `performHit`, `runCombat` y funciones relacionadas a `src/domain/combat/*`.
+- [x] Dejar wrappers en `AetherSystems` para mantener compatibilidad de API.
+- [x] Hacer que el motor de combate devuelva resultados/eventos, no efectos UI directos.
 
 ### Fase 4 - Modularizar economia e inventario
 
-- [ ] Extraer acciones de inventario/equipo (`acquireItem`, `equipItem`, `sellItem`, `salvageItem`) a `src/domain/economy/*`.
-- [ ] Extraer forja/mercado/recursos (`forgeItem`, `refreshMarket`, `buyMarketItem`, `buyResource`) a modulos separados.
-- [ ] Centralizar validaciones de capacidad de inventario y costes.
+- [x] Extraer acciones de inventario/equipo (`acquireItem`, `equipItem`, `sellItem`, `salvageItem`) a `src/domain/economy/*`.
+- [x] Extraer forja/mercado/recursos (`forgeItem`, `refreshMarket`, `buyMarketItem`, `buyResource`) a modulos separados.
+- [x] Centralizar validaciones de capacidad de inventario y costes.
 
 ### Fase 5 - Modularizar actividades y timers
 
-- [ ] Extraer regeneracion pasiva (`passiveRegen`) a `src/domain/activities/regen.js`.
-- [ ] Extraer trabajos y expediciones a `src/domain/activities/jobs.js` y `expeditions.js`.
-- [ ] Extraer resolucion de temporizadores a `src/domain/activities/timers.js`.
+- [x] Extraer regeneracion pasiva (`passiveRegen`) a `src/domain/activities/*`.
+- [x] Extraer trabajos y expediciones a `src/domain/activities/*`.
+- [x] Extraer resolucion de temporizadores a `src/domain/activities/*`.
 
 ### Fase 6 - Modularizar progresion
 
-- [ ] Extraer XP/rango (`gainXp`, `currentRank`) a `src/domain/progression/*`.
-- [ ] Extraer quests (`trackQuest`, `claimQuest`, `rerollQuests`) a `quests.js`.
-- [ ] Extraer logros (`achievementProgress`, `checkAchievements`) a `achievements.js`.
-- [ ] Extraer ascension y reliquias (`ascend`, `spendRelic`) a `ascension.js`.
+- [x] Extraer XP/rango (`gainXp`, `currentRank`) a `src/domain/progression/*`.
+- [x] Extraer quests (`trackQuest`, `claimQuest`, `rerollQuests`) a `src/domain/progression/*`.
+- [x] Extraer logros (`achievementProgress`, `checkAchievements`) a `src/domain/progression/*`.
+- [x] Extraer ascension y reliquias (`ascend`, `spendRelic`) a `src/domain/progression/*`.
 
 ### Fase 7 - Reorganizar capa `app`
 
-- [ ] Dividir store en: `state/defaults/persistence/selectors/mutations`.
-- [ ] Crear `app/actions/*` para orquestar casos de uso por dominio.
-- [ ] Convertir `controller.js` en coordinador de routing/render/scheduler (sin logica de negocio).
+- [x] Dividir store en: `state/defaults/persistence/selectors/mutations`.
+- [x] Crear `app/actions/*` para orquestar casos de uso por dominio.
+- [x] Convertir `controller.js` en coordinador de routing/render/scheduler (sin logica de negocio).
 
 ### Fase 8 - Partir UI por vistas
 
-- [ ] Dividir `views-content.js` en archivos por pantalla en `src/ui/views/*`.
-- [ ] Mover helpers de `views-runtime.js` a `src/ui/runtime/*`.
-- [ ] Mantener `views.js` como agregador temporal para no romper `renderContent()`.
+- [x] Dividir `views-content.js` en archivos por pantalla en `src/ui/views/*`.
+- [x] Mover helpers de `views-runtime.js` a `src/ui/runtime/*`.
+- [x] Mantener compatibilidad temporal durante la migracion de vistas y retirar agregadores al finalizar.
+
+Avance actual:
+- Se extrajeron vistas principales a `src/ui/views/main-views.js` (`resumen`, `perfil`, `inventario`, `arena`).
+- Se extrajeron vistas secundarias a `src/ui/views/secondary-views.js` (`expedicion`, `mazmorra`, `mercado`, `forja`, `gremio`, `entrenamiento`, `trabajo`, `mascota`, `logros`, `diario`).
+- `views-content.js` ahora usa ambos modulos como fuente principal de `renderContent()`.
+- Se movieron helpers de UI reutilizables (`icon`, `withIcon`, `replaceEmojiIcons`, tooltips) a `src/ui/runtime/ui-helpers.js` y `views-runtime.js` consume ese modulo.
 
 ### Fase 9 - Contratos y limpieza final
 
-- [ ] Reemplazar llamadas directas via `window` por imports internos donde aplique.
+- [x] Reemplazar llamadas directas via `window` por imports internos donde aplique.
 - [ ] Eliminar wrappers temporales cuando toda la migracion este completa.
-- [ ] Documentar API interna final (modulos, eventos, limites de capa).
+- [x] Documentar API interna final (modulos, eventos, limites de capa).
+
+Avance actual:
+- Se eliminó el wrapper `views.js`; el controller ahora compone vistas desde `window.AetherViewLayout` y `window.AetherViewContent`.
+- El controller ahora importa `views-layout.js` y `views-content.js` como modulos ESM directos.
+- Se eliminó la dependencia global de `window.AetherViewRuntime`/`window.AetherViewLayout`/`window.AetherViewContent` dentro del flujo principal de render.
 
 ## Riesgos y mitigaciones
 

@@ -1,26 +1,26 @@
-(() => {
-  const runtime = window.AetherViewRuntime;
-  const {
-    VIEW_GROUPS,
-    MOBILE_PRIMARY_VIEWS,
-    MOBILE_OVERFLOW_VIEWS,
-    VIEW_META,
-    state,
-    fmt,
-    htmlStat,
-    progressBar,
-    xpNeeded,
-    getDerivedStats,
-    currentRank,
-    activeMeta,
-    getStoreMeta,
-    icon,
-    withIcon,
-    replaceEmojiIcons,
-    tooltipAttr,
-  } = runtime;
+import { viewRuntime as runtime } from './views-runtime.js';
+const {
+  VIEW_GROUPS,
+  MOBILE_PRIMARY_VIEWS,
+  MOBILE_OVERFLOW_VIEWS,
+  VIEW_META,
+  state,
+  fmt,
+  htmlStat,
+  progressBar,
+  xpNeeded,
+  getDerivedStats,
+  currentRank,
+  activeMeta,
+  getStoreMeta,
+  maxInventory,
+  icon,
+  withIcon,
+  replaceEmojiIcons,
+  tooltipAttr,
+} = runtime;
 
-  function renderHud() {
+export function renderHud() {
     const ds = getDerivedStats();
     const rank = currentRank();
     const meta = activeMeta();
@@ -68,14 +68,14 @@
             ${htmlStat('Oro', fmt(state.player.gold), '', 'Moneda principal para comprar, forjar y mejorar.')}
             ${htmlStat('Pociones', fmt(state.player.potions), '', 'Curación rápida para sostener el ciclo activo.')}
             ${htmlStat('Ataque', fmt(ds.attack), '', 'Daño base de tus golpes y habilidades ofensivas.')}
-            ${htmlStat('Mochila', `${state.player.inventory.length}/${window.AetherModel.maxInventory()}`, '', 'Capacidad usada frente al máximo disponible.')}
+            ${htmlStat('Mochila', `${state.player.inventory.length}/${maxInventory()}`, '', 'Capacidad usada frente al máximo disponible.')}
           </div>
         </div>
       </div>
     `;
   }
 
-  function navButton(view, mobile = false) {
+function navButton(view, mobile = false) {
     const meta = VIEW_META[view];
     const active = state.currentView === view;
     if (mobile) {
@@ -96,7 +96,7 @@
     `;
   }
 
-  function renderDesktopNav() {
+export function renderDesktopNav() {
     return `
       <div class="glass rounded-3xl p-4 lg:p-5 sticky top-4 space-y-5">
         <div>
@@ -127,7 +127,7 @@
     `;
   }
 
-  function renderMobileNav() {
+export function renderMobileNav() {
     return `
       <nav class="mobile-nav glass-strong md:hidden">
         <div class="mobile-nav-grid">
@@ -141,7 +141,7 @@
     `;
   }
 
-  function renderMobileSheet() {
+export function renderMobileSheet() {
     if (!state.ui.moreMenuOpen) return '';
     return `
       <div class="fixed inset-0 z-40 md:hidden">
@@ -176,12 +176,9 @@
       </div>
     `;
   }
-
-
-  window.AetherViewLayout = {
-    renderHud,
-    renderDesktopNav,
-    renderMobileNav,
-    renderMobileSheet,
-  };
-})();
+export const AetherViewLayout = {
+  renderHud,
+  renderDesktopNav,
+  renderMobileNav,
+  renderMobileSheet,
+};

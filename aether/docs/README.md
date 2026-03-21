@@ -52,12 +52,11 @@ No se rehizo la arquitectura base para minimizar riesgo. La siguiente iteración
 ## Refactorización adicional aplicada
 
 - Extracción de estilos a `styles.css` para reducir el peso estructural de `index.html`.
-- División de `views.js` en módulos:
+- División de vistas en módulos:
   - `views-runtime.js`
   - `views-layout.js`
   - `views-content.js`
-  - `views.js` como agregador de compatibilidad
-- Conservación de la API pública `window.AetherViews` para no romper `controller.js`.
+- `controller.js` ahora consume `views-layout.js` y `views-content.js` vía imports ESM directos.
 - Validación sintáctica con `node --check` en todos los archivos JS.
 
 
@@ -81,4 +80,4 @@ Se reforzó la capa visual y de lectura en vistas clave sin cambiar la API de `g
 ## Reparacion posterior
 - Corregido error de carga en `views-runtime.js` por referencia invalida a `navButton`.
 - Corregido error en `views-content.js` por uso de `htmlStat` sin importarlo del runtime.
-- Validado el arranque conjunto de `config.js`, `utils.js`, `model.js`, `systems.js`, `views-*`, `views.js` y `controller.js`.
+- Validado el arranque conjunto de `config.js`, `utils.js`, `model.js`, `systems.js`, `views-*` y `controller.js`.

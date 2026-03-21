@@ -1,3 +1,8 @@
+import { attachSystemActions } from '../actions/system-actions.js';
+import { AetherViewLayout } from './views-layout.js';
+import { AetherViewContent } from './views-content.js';
+import { replaceEmojiIcons } from '../../shared/ui/runtime/ui-helpers.js';
+
 (() => {
   const { STORAGE_KEY, VIEWS, VIEW_META } = window.AetherConfig;
   const { $, clamp, timeLeft, sanitizeInlineHtml } = window.AetherUtils;
@@ -13,7 +18,10 @@
     syncExternalState,
   } = window.AetherModel;
   const Systems = window.AetherSystems;
-  const Views = window.AetherViews;
+  const Views = {
+    ...AetherViewLayout,
+    ...AetherViewContent,
+  };
 
   const VIEW_KEYS = new Set(VIEWS.map(([key]) => key));
   const REGION_IDS = {
@@ -79,9 +87,7 @@
       const el = regionEl(region);
       if (!el) return;
       const rawHtml = renderRegion(region);
-      const html = window.AetherViewRuntime && typeof window.AetherViewRuntime.replaceEmojiIcons === 'function'
-        ? window.AetherViewRuntime.replaceEmojiIcons(rawHtml)
-        : rawHtml;
+      const html = replaceEmojiIcons(rawHtml);
       if (htmlCache[region] !== html) {
         el.innerHTML = html;
         htmlCache[region] = html;
@@ -261,49 +267,10 @@
     hardReset: resetGame,
   };
 
-  const actionMap = {
-    setZone: ['hud', 'content'],
-    fightArena: ['hud', 'content'],
-    arenaBlitz: ['hud', 'content', 'modal'],
-    runDungeon: ['hud', 'content', 'modal'],
-    startExpedition: ['hud', 'content'],
-    startJob: ['hud', 'content'],
-    claimQuest: ['hud', 'content'],
-    rerollQuests: ['hud', 'content'],
-    usePotion: ['hud', 'content'],
-    autoHeal: ['hud', 'content'],
-    claimDaily: ['hud', 'content'],
-    buyMarketItem: ['hud', 'content'],
-    buyResource: ['hud', 'content'],
-    equipItem: ['hud', 'content'],
-    unequipItem: ['hud', 'content'],
-    sellItem: ['hud', 'content'],
-    salvageItem: ['hud', 'content'],
-    forgeItem: ['hud', 'content'],
-    upgradeEquipped: ['hud', 'content'],
-    rerollItem: ['hud', 'content'],
-    upgradeGuild: ['hud', 'content'],
-    trainAttribute: ['hud', 'content'],
-    upgradeSkill: ['hud', 'content'],
-    toggleActiveSkill: ['hud', 'content'],
-    hatchPet: ['hud', 'content'],
-    feedPet: ['hud', 'content'],
-    releasePet: ['hud', 'content'],
-    spendRelic: ['hud', 'content'],
-    ascend: ['hud', 'content'],
-    refreshMarket: ['hud', 'content'],
-    autoManage: ['hud', 'content'],
-  };
-
-  Object.entries(actionMap).forEach(([name, regions]) => {
-    game[name] = (...args) => {
-      let result;
-      mutate(`systems/${name}`, () => {
-        result = Systems[name](...args);
-      }, { source: 'systems' });
-      afterAction(regions);
-      return result;
-    };
+  attachSystemActions(game, {
+    systems: Systems,
+    mutate,
+    afterAction,
   });
 
   function tick() {
