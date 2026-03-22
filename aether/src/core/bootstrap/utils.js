@@ -15,21 +15,21 @@
   const uid = () => `${Date.now().toString(36)}_${(uidCounter++).toString(36)}_${rand(100, 999)}`;
 
   const STAT_META = {
-    attack: { label: 'Ataque', tip: 'Aumenta el daño base que infliges en combate.' },
-    defense: { label: 'Defensa', tip: 'Reduce parte del daño recibido en cada impacto.' },
-    speed: { label: 'Velocidad', tip: 'Mejora la iniciativa y el ritmo de tus acciones.' },
-    hp: { label: 'Vida máxima', tip: 'Determina la cantidad total de salud disponible.' },
-    crit: { label: 'Golpe crítico', tip: 'Probabilidad de infligir daño crítico aumentado.' },
-    dodge: { label: 'Esquiva', tip: 'Probabilidad de evitar por completo un golpe enemigo.' },
-    block: { label: 'Bloqueo', tip: 'Probabilidad de mitigar una parte importante del daño.' },
-    lifesteal: { label: 'Robo de vida', tip: 'Porcentaje del daño convertido en curación propia.' },
-    attackPct: { label: 'Ataque %', tip: 'Multiplicador porcentual al ataque base.' },
-    defensePct: { label: 'Defensa %', tip: 'Multiplicador porcentual a la defensa base.' },
-    hpPct: { label: 'Vida %', tip: 'Multiplicador porcentual a la vida máxima.' },
-    speedPct: { label: 'Velocidad %', tip: 'Multiplicador porcentual a la velocidad base.' },
-    goldPct: { label: 'Oro %', tip: 'Incrementa el oro obtenido en actividades.' },
-    lootLuck: { label: 'Suerte de botín', tip: 'Mejora ligeramente la calidad y la frecuencia del botín.' },
-    regenPct: { label: 'Regeneración %', tip: 'Incrementa la recuperación pasiva de recursos.' },
+    attack: { label: 'Ataque', tip: 'Daño base de tus golpes y habilidades ofensivas. Sube el ritmo de limpiezas y reduce la duración de los combates.' },
+    defense: { label: 'Defensa', tip: 'Mitiga parte del daño entrante en cada impacto. Aumenta la supervivencia frente a enemigos de daño sostenido.' },
+    speed: { label: 'Velocidad', tip: 'Ajusta iniciativa y frecuencia de acción. Más velocidad mejora tu control del combate y la consistencia del turno.' },
+    hp: { label: 'Vida máxima', tip: 'Cantidad total de salud antes de caer derrotado. Un valor alto te permite asumir picos de daño con más margen.' },
+    crit: { label: 'Golpe crítico', tip: 'Probabilidad de convertir un golpe normal en crítico. Es clave para picos de daño en builds ofensivas.' },
+    dodge: { label: 'Esquiva', tip: 'Probabilidad de evitar por completo un ataque recibido. Gana valor cuando enfrentas enemigos de golpes pesados.' },
+    block: { label: 'Bloqueo', tip: 'Probabilidad de amortiguar una parte importante del daño. Aporta estabilidad en peleas largas y de desgaste.' },
+    lifesteal: { label: 'Robo de vida', tip: 'Porcentaje del daño infligido que regresa como curación. Mejora tu sustain durante cadenas de combate.' },
+    attackPct: { label: 'Ataque %', tip: 'Multiplicador porcentual aplicado sobre tu ataque base. Escala mejor cuanto mayor sea tu ataque plano.' },
+    defensePct: { label: 'Defensa %', tip: 'Multiplicador porcentual aplicado sobre tu defensa base. Potencia builds resistentes y consistentes.' },
+    hpPct: { label: 'Vida %', tip: 'Multiplicador porcentual aplicado a la vida máxima. Aumenta tu margen para errores y daño explosivo enemigo.' },
+    speedPct: { label: 'Velocidad %', tip: 'Multiplicador porcentual aplicado a la velocidad base. Refuerza builds de control y rotación rápida.' },
+    goldPct: { label: 'Oro %', tip: 'Incrementa el oro obtenido en actividades y combates. Mejora tu economía para mercado, forja y progresión.' },
+    lootLuck: { label: 'Suerte de botín', tip: 'Aumenta la probabilidad de obtener botín de mayor calidad. Su impacto se nota más en sesiones largas de farmeo.' },
+    regenPct: { label: 'Regeneración %', tip: 'Mejora la recuperación pasiva de recursos clave. Ayuda a sostener ciclos activos sin pausas largas.' },
   };
 
   const RARITY_META = {

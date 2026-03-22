@@ -42,10 +42,25 @@ import { AetherViewContent } from './views-content.js';
     activeTarget: null,
     hideTimer: 0,
     frame: 0,
+    longPressTimer: 0,
+    longPressTarget: null,
+    longPressTriggered: false,
+    suppressClickUntil: 0,
+    suppressClickTarget: null,
   };
   let rafId = 0;
   let loopId = 0;
   let saveTimer = 0;
+  const STARTER_NAME_SUGGESTIONS = [
+    'Aren',
+    'Lysandra',
+    'Kael',
+    'Nerea',
+    'Darian',
+    'Iria',
+    'Ravian',
+    'Selene',
+  ];
 
   function regionEl(region) {
     return $(REGION_IDS[region]);
@@ -291,6 +306,7 @@ import { AetherViewContent } from './views-content.js';
 
   function scheduleSave(force = false) {
     if (!force && !getStoreMeta().isDirty) return;
+    if (!force && state.ui && state.ui.autoSave === false) return;
     if (force) {
       if (saveTimer) {
         clearTimeout(saveTimer);
@@ -359,6 +375,70 @@ import { AetherViewContent } from './views-content.js';
     queueRender('content');
   }
 
+  function setInventoryPageSize(size) {
+    const next = clamp(Number(size) || 18, 6, 36);
+    mutate('ui/setInventoryPageSize', () => {
+      state.ui.inventoryPageSize = next;
+      state.ui.inventoryPage = 1;
+    }, { source: 'ui' });
+    queueRender('content');
+    scheduleSave();
+  }
+
+  function setJournalPageSize(size) {
+    const next = clamp(Number(size) || 16, 8, 40);
+    mutate('ui/setJournalPageSize', () => {
+      state.ui.journalPageSize = next;
+      state.ui.journalPage = 1;
+    }, { source: 'ui' });
+    queueRender('content');
+    scheduleSave();
+  }
+
+  function setAutoSaveEnabled(enabled) {
+    const next = !!enabled;
+    mutate('ui/setAutoSaveEnabled', () => {
+      state.ui.autoSave = next;
+    }, { source: 'ui' });
+    if (next) scheduleSave(true);
+    Systems.toast(next ? 'Guardado automatico activado.' : 'Guardado automatico desactivado.', next ? 'success' : 'warning');
+  }
+
+  function requestDisableAutoSave() {
+    if (state.ui.autoSave === false) return;
+    mutate('ui/requestDisableAutoSave', () => {
+      state.ui.modal = {
+        type: 'confirm-disable-autosave',
+        title: 'Desactivar guardado automático',
+        content: `
+          <div class="space-y-4">
+            <div class="glass rounded-2xl p-4 text-sm text-slate-200/90">
+              Si lo desactivas, podrías perder progreso si cierras o recargas sin guardar manualmente.
+            </div>
+            <div class="glass rounded-2xl p-4 text-sm text-slate-300/82">
+              Recomendación: mantenlo activo salvo que necesites control manual total.
+            </div>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <button type="button" class="btn" onclick="game.closeModal()">Cancelar</button>
+              <button type="button" class="btn btn-danger" onclick="game.confirmDisableAutoSave()">Sí, desactivar</button>
+            </div>
+          </div>
+        `,
+      };
+    }, { source: 'ui', markDirty: false });
+    queueRender('modal');
+  }
+
+  function confirmDisableAutoSave() {
+    setAutoSaveEnabled(false);
+    closeModal();
+  }
+
+  function saveNow() {
+    scheduleSave(true);
+    Systems.toast('Partida guardada ahora.', 'success');
+  }
+
   function toggleMoreMenu(force) {
     mutate('ui/toggleMoreMenu', () => {
       state.ui.moreMenuOpen = typeof force === 'boolean' ? force : !state.ui.moreMenuOpen;
@@ -369,6 +449,7 @@ import { AetherViewContent } from './views-content.js';
   function closeModal() {
     mutate('ui/closeModal', () => {
       state.ui.modal = null;
+      state.ui.pendingRenameName = '';
     }, { source: 'ui', markDirty: false });
     queueRender('modal');
   }
@@ -442,15 +523,175 @@ import { AetherViewContent } from './views-content.js';
   }
 
   function resetGame() {
-    if (typeof confirm === 'function') {
-      const ok = confirm('¿Seguro que quieres reiniciar la partida? Se perdera el progreso local.');
-      if (!ok) return;
-    }
+    requestNewGameReset();
+  }
+
+  function requestNewGameReset() {
+    mutate('ui/requestNewGameReset', () => {
+      state.ui.modal = {
+        type: 'confirm-new-game',
+        title: 'Iniciar nueva partida',
+        content: `
+          <div class="space-y-4">
+            <div class="glass rounded-2xl p-4 text-sm text-slate-200/90">
+              Esta accion borra <b>todo el progreso local</b>: personaje, inventario, economia, logros y registro de partida.
+            </div>
+            <div class="glass rounded-2xl p-4 text-sm text-slate-300/80">
+              Se abrira de inmediato el flujo de inicio para elegir nombre y arrancar desde cero.
+            </div>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <button type="button" class="btn" onclick="game.closeModal()">Cancelar</button>
+              <button type="button" class="btn btn-danger" onclick="game.confirmNewGameReset()">Eliminar datos y continuar</button>
+            </div>
+          </div>
+        `,
+      };
+    }, { source: 'ui', markDirty: false });
+    queueRender('modal');
+  }
+
+  function confirmNewGameReset() {
     hardReset();
     setView('resumen', { keepScroll: false });
-    Systems.toast('Nueva partida iniciada', 'danger');
+    Systems.toast('Datos eliminados. Configura tu nueva partida.', 'danger');
+    queueRender(Object.keys(REGION_IDS));
+  }
+
+  function normalizePlayerName(value = '') {
+    return String(value)
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 22);
+  }
+
+  function readPendingNameFromDom() {
+    const input = document.getElementById('new-game-name');
+    if (!input || typeof input.value !== 'string') return '';
+    return normalizePlayerName(input.value);
+  }
+
+  function setPendingPlayerName(value = '') {
+    const next = normalizePlayerName(value);
+    mutate('ui/setPendingPlayerName', () => {
+      state.ui.pendingPlayerName = next;
+    }, { source: 'ui', markDirty: false });
+    queueRender('modal');
+  }
+
+  function suggestPlayerName() {
+    const suggestion = STARTER_NAME_SUGGESTIONS[Math.floor(Math.random() * STARTER_NAME_SUGGESTIONS.length)] || 'Aren';
+    setPendingPlayerName(suggestion);
+  }
+
+  function readPendingRenameFromDom() {
+    const input = document.getElementById('rename-player-name');
+    if (!input || typeof input.value !== 'string') return '';
+    return normalizePlayerName(input.value);
+  }
+
+  function setPendingRenameName(value = '') {
+    const next = normalizePlayerName(value);
+    mutate('ui/setPendingRenameName', () => {
+      state.ui.pendingRenameName = next;
+    }, { source: 'ui', markDirty: false });
+  }
+
+  function requestRenamePlayer() {
+    const suggested = normalizePlayerName(state.player.name || '');
+    mutate('ui/requestRenamePlayer', () => {
+      state.ui.pendingRenameName = suggested;
+      state.ui.modal = {
+        type: 'rename-player',
+        title: 'Renombrar gladiador',
+        content: `
+          <div class="space-y-4">
+            <div class="glass rounded-2xl p-4 text-sm text-slate-300/82">
+              Cambiar nombre actual: <b>${sanitizeInlineHtml(state.player.name || 'Gladiador')}</b>
+            </div>
+            <div class="glass rounded-2xl p-4">
+              <label for="rename-player-name" class="text-xs uppercase tracking-[.18em] text-slate-300/60">Nuevo nombre</label>
+              <input
+                id="rename-player-name"
+                type="text"
+                maxlength="22"
+                autocomplete="nickname"
+                spellcheck="false"
+                value="${sanitizeInlineHtml(suggested)}"
+                oninput="game.setPendingRenameName(this.value)"
+                placeholder="Ej. Nerea"
+                class="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/55 px-4 py-3 text-base text-slate-100 placeholder:text-slate-400/70 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              />
+              <div class="mt-3 text-xs text-slate-300/62">Entre 2 y 22 caracteres. No afecta tu progreso ni tus estadisticas.</div>
+            </div>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <button type="button" class="btn" onclick="game.closeModal()">Cancelar</button>
+              <button type="button" class="btn btn-primary" onclick="game.confirmRenamePlayer()">Guardar nombre</button>
+            </div>
+          </div>
+        `,
+      };
+    }, { source: 'ui', markDirty: false });
+    queueRender('modal');
+  }
+
+  function confirmRenamePlayer(name = '') {
+    const direct = normalizePlayerName(name);
+    const domValue = readPendingRenameFromDom();
+    const pending = normalizePlayerName(state.ui.pendingRenameName || '');
+    const finalName = direct || domValue || pending;
+    const current = normalizePlayerName(state.player.name || '');
+
+    if (finalName.length < 2) {
+      Systems.toast('El nombre debe tener al menos 2 caracteres.', 'warning');
+      return;
+    }
+    if (finalName === current) {
+      closeModal();
+      return;
+    }
+
+    mutate('ui/confirmRenamePlayer', () => {
+      state.player.name = finalName;
+      state.ui.pendingRenameName = '';
+      state.ui.modal = null;
+      state.journal.unshift({
+        id: `${Date.now().toString(36)}_rename`,
+        ts: Date.now(),
+        icon: '📛',
+        text: `El gladiador adopta un nuevo nombre: ${sanitizeInlineHtml(finalName)}.`,
+      });
+      state.journal = state.journal.slice(0, 120);
+    }, { source: 'ui' });
+
+    queueRender(['hud', 'content', 'modal']);
+    scheduleSave(true);
+    Systems.toast(`Nombre actualizado a ${finalName}.`, 'success');
+  }
+
+  function completeNewGameOnboarding(name = '') {
+    const direct = normalizePlayerName(name);
+    const pending = normalizePlayerName(state.ui.pendingPlayerName || '');
+    const domValue = readPendingNameFromDom();
+    const finalName = direct || domValue || pending;
+
+    if (finalName.length < 2) {
+      Systems.toast('Elige un nombre de al menos 2 caracteres.', 'warning');
+      return;
+    }
+
+    mutate('ui/completeOnboarding', () => {
+      state.player.name = finalName;
+      state.player.onboardingCompleted = true;
+      state.ui.pendingPlayerName = '';
+      state.ui.modal = null;
+      const introLine = `El gladiador ${sanitizeInlineHtml(finalName)} jura su entrada en la arena.`;
+      state.journal.unshift({ id: `${Date.now().toString(36)}_intro`, ts: Date.now(), icon: '🏛️', text: introLine });
+      state.journal = state.journal.slice(0, 120);
+    }, { source: 'ui' });
+
     queueRender(Object.keys(REGION_IDS));
     scheduleSave(true);
+    Systems.toast(`Bienvenido, ${finalName}.`, 'success');
   }
 
   function afterAction(regions) {
@@ -464,6 +705,36 @@ import { AetherViewContent } from './views-content.js';
     el.className = 'pointer-events-none fixed z-[80] hidden max-w-[290px] rounded-2xl border border-cyan-300/24 bg-slate-950/92 px-3 py-2 text-xs leading-relaxed text-slate-100 backdrop-blur-xl shadow-[0_12px_40px_rgba(2,6,23,.55)] opacity-0 translate-y-1 transition duration-150 ease-out';
     document.body.appendChild(el);
     tooltip.el = el;
+
+    function isCoarsePointer() {
+      return window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    }
+
+    function tooltipTargetFromEvent(event) {
+      const raw = event.target;
+      if (!(raw instanceof Element)) return null;
+      return raw.closest('[data-tooltip]');
+    }
+
+    function isInteractiveTarget(target) {
+      if (!target || !(target instanceof Element)) return false;
+      return target.matches('button, a, input, select, textarea, [role="button"], [onclick], .btn, .nav-link, .mobile-nav-btn');
+    }
+
+    function isButtonLikeTarget(target) {
+      if (!target || !(target instanceof Element)) return false;
+      return target.matches('button, .btn, .nav-link, .mobile-nav-btn, [role="button"]');
+    }
+
+    function clearLongPressState() {
+      if (tooltip.longPressTimer) {
+        clearTimeout(tooltip.longPressTimer);
+        tooltip.longPressTimer = 0;
+      }
+      if (tooltip.longPressTarget) tooltip.longPressTarget.classList.remove('tooltip-touch-armed');
+      tooltip.longPressTarget = null;
+      tooltip.longPressTriggered = false;
+    }
 
     function positionNow(target) {
       if (!target || !tooltip.el || tooltip.el.classList.contains('hidden')) return;
@@ -515,21 +786,76 @@ import { AetherViewContent } from './views-content.js';
     }
 
     document.addEventListener('mouseover', (event) => {
-      const target = event.target.closest('[data-tooltip]');
+      if (isCoarsePointer()) return;
+      const target = tooltipTargetFromEvent(event);
       if (target) showTooltip(target);
     });
     document.addEventListener('mouseout', (event) => {
-      const target = event.target.closest('[data-tooltip]');
+      if (isCoarsePointer()) return;
+      const target = tooltipTargetFromEvent(event);
       if (target) hideTooltip(target);
     });
     document.addEventListener('focusin', (event) => {
-      const target = event.target.closest('[data-tooltip]');
+      const target = tooltipTargetFromEvent(event);
       if (target) showTooltip(target);
     });
     document.addEventListener('focusout', (event) => {
-      const target = event.target.closest('[data-tooltip]');
+      const target = tooltipTargetFromEvent(event);
       if (target) hideTooltip(target);
     });
+    document.addEventListener('pointerdown', (event) => {
+      if (!isCoarsePointer()) return;
+      const target = tooltipTargetFromEvent(event);
+      if (!target) {
+        hideTooltip();
+        clearLongPressState();
+        return;
+      }
+      if (!isButtonLikeTarget(target)) return;
+      clearLongPressState();
+      tooltip.longPressTarget = target;
+      tooltip.longPressTarget.classList.add('tooltip-touch-armed');
+      tooltip.longPressTimer = window.setTimeout(() => {
+        if (!tooltip.longPressTarget) return;
+        tooltip.longPressTriggered = true;
+        showTooltip(tooltip.longPressTarget);
+      }, 450);
+    }, true);
+    document.addEventListener('pointerup', () => {
+      if (!isCoarsePointer()) return;
+      if (tooltip.longPressTriggered && tooltip.longPressTarget) {
+        tooltip.suppressClickUntil = Date.now() + 750;
+        tooltip.suppressClickTarget = tooltip.longPressTarget;
+        window.setTimeout(() => {
+          if (Date.now() >= tooltip.suppressClickUntil) hideTooltip();
+        }, 1400);
+      }
+      clearLongPressState();
+    }, true);
+    document.addEventListener('pointercancel', () => {
+      clearLongPressState();
+    }, true);
+    document.addEventListener('click', (event) => {
+      if (!isCoarsePointer()) return;
+      const target = tooltipTargetFromEvent(event);
+      if (!target) return;
+      if (isButtonLikeTarget(target)) {
+        if (tooltip.suppressClickTarget === target && Date.now() <= tooltip.suppressClickUntil) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        return;
+      }
+      if (!isInteractiveTarget(target)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (tooltip.activeTarget === target && tooltip.el && !tooltip.el.classList.contains('hidden')) {
+          hideTooltip();
+        } else {
+          showTooltip(target);
+        }
+      }
+    }, true);
     document.addEventListener('mousemove', () => {
       if (tooltip.activeTarget) positionTooltip(tooltip.activeTarget);
     });
@@ -575,11 +901,25 @@ import { AetherViewContent } from './views-content.js';
     setTab: setView,
     setInventoryFilter,
     setInventoryPage,
+    setInventoryPageSize,
     setJournalPage,
+    setJournalPageSize,
+    setAutoSaveEnabled,
+    requestDisableAutoSave,
+    confirmDisableAutoSave,
+    saveNow,
     toggleMoreMenu,
     showCombat,
     closeModal,
     hardReset: resetGame,
+    requestNewGameReset,
+    confirmNewGameReset,
+    setPendingPlayerName,
+    suggestPlayerName,
+    completeNewGameOnboarding,
+    requestRenamePlayer,
+    setPendingRenameName,
+    confirmRenamePlayer,
   };
 
   attachSystemActions(game, {

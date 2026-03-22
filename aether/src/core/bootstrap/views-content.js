@@ -39,6 +39,7 @@ const {
   getPityStatus,
   getForgePityStatus,
   getForgeState,
+  getStoreMeta,
   icon,
   replaceEmojiIcons,
   rarityName,
@@ -121,7 +122,7 @@ function zoneSelector() {
           type="button"
           class="text-left glass rounded-2xl p-4 transition ${state.player.zoneId === zone.id ? 'ring ring-cyan-300/35 bg-cyan-400/8' : ''} ${!isZoneUnlocked(zone) ? 'opacity-45' : ''}"
           ${isZoneUnlocked(zone) ? `onclick="game.setZone(${zone.id})"` : 'disabled'}
-          ${tooltipAttr(`Zona ${zone.name}. Requiere nivel ${zone.unlockLevel} y consume ${zone.energyCost} de energía y ${zone.staminaCost} de aguante.`)}
+          ${tooltipAttr(`Zona ${zone.name}. Requiere nivel ${zone.unlockLevel} y cada combate consume ${zone.energyCost} de energía y ${zone.staminaCost} de aguante. Elige según tu economía de recursos.`)}
         >
           <div class="flex items-start justify-between gap-3">
             <div>
@@ -254,14 +255,14 @@ function inventoryCards() {
         const transcendPreview = previewTranscendItem(item.id);
         const stabilizePreview = previewStabilizeItem(item.id);
         return `
-          <div class="glass rounded-2xl p-4 item-card cv-auto inventory-card-pro" ${tooltipAttr(`Objeto de rareza ${rarityName(item.rarity)}. Puntuación ${fmt(item.score)}. ${compare.detail}`)}>
+          <div class="glass rounded-2xl p-4 item-card cv-auto inventory-card-pro" ${tooltipAttr(`Pieza ${rarityName(item.rarity)} con puntuación ${fmt(item.score)}. ${compare.detail} Revisa stats y coste de mejora antes de invertir.`)}>
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2"><div class="font-black rarity-${item.rarity} leading-snug break-words">${item.name}</div>${rarityBadge(item.rarity)}</div>
                 <div class="text-xs text-slate-300/60 mt-1">${SLOT_NAMES[item.slot]} · Nivel ${item.level || item.itemLevel} · Mejora +${item.upgrade || 0}/${headroom.cap} · Afinidad ${item.affinityLevel || 0}</div>
               </div>
               <div class="text-right shrink-0">
-                <div class="text-xs rounded-full px-2 py-1 bg-white/[.06]" ${tooltipAttr('Puntuación total estimada del objeto según sus estadísticas y mejora actual.')}>Punt. ${fmt(item.score)}</div>
+                <div class="text-xs rounded-full px-2 py-1 bg-white/[.06]" ${tooltipAttr('Puntuación total estimada según estadísticas, rareza y nivel de mejora. Úsala como guía rápida, no como criterio único.')}>Punt. ${fmt(item.score)}</div>
                 <div class="mt-2">${statusChip(compare.label, compare.tone)}</div>
               </div>
             </div>
@@ -282,10 +283,10 @@ function inventoryCards() {
                 <button type="button" class="btn !py-2 text-xs" onclick="game.salvageItem('${item.id}')">Reciclar</button>
               </div>
               <div class="grid grid-cols-2 gap-2">
-                <button type="button" class="btn btn-violet !py-2 text-xs" onclick="game.reforgeItem('${item.id}')" ${reforgePreview ? tooltipAttr(`Coste reforge: ${Object.entries(reforgePreview.cost).filter(([, value]) => value > 0).map(([key, value]) => `${value} ${key}`).join(', ')}`) : 'disabled'}>Retemplar</button>
-                <button type="button" class="btn btn-gold !py-2 text-xs" onclick="game.transcendItem('${item.id}')" ${transcendPreview ? tooltipAttr(`Trascender ${transcendPreview.from} -> ${transcendPreview.to}. Probabilidad ${Math.round(transcendPreview.successChance * 100)}%`) : 'disabled'}>Trascender</button>
+                <button type="button" class="btn btn-violet !py-2 text-xs" onclick="game.reforgeItem('${item.id}')" ${reforgePreview ? tooltipAttr(`Retemplado total: vuelve a tirar afijos con mayor varianza. Coste: ${Object.entries(reforgePreview.cost).filter(([, value]) => value > 0).map(([key, value]) => `${value} ${key}`).join(', ')}.`) : 'disabled'}>Retemplar</button>
+                <button type="button" class="btn btn-gold !py-2 text-xs" onclick="game.transcendItem('${item.id}')" ${transcendPreview ? tooltipAttr(`Trascender: ${transcendPreview.from} a ${transcendPreview.to}. Probabilidad de éxito ${Math.round(transcendPreview.successChance * 100)}%.`) : 'disabled'}>Trascender</button>
               </div>
-              <button type="button" class="btn !py-2 text-xs mt-2" onclick="game.stabilizeItem('${item.id}')" ${stabilizePreview ? tooltipAttr(`Stabilize ${Math.round(stabilizePreview.successChance * 100)}%. Coste ${Object.entries(stabilizePreview.cost).filter(([, value]) => value > 0).map(([key, value]) => `${value} ${key}`).join(', ')}`) : 'disabled'}>Stabilize</button>
+              <button type="button" class="btn !py-2 text-xs mt-2" onclick="game.stabilizeItem('${item.id}')" ${stabilizePreview ? tooltipAttr(`Estabilizar: reduce varianza y mejora consistencia de la pieza. Probabilidad ${Math.round(stabilizePreview.successChance * 100)}%. Coste ${Object.entries(stabilizePreview.cost).filter(([, value]) => value > 0).map(([key, value]) => `${value} ${key}`).join(', ')}.`) : 'disabled'}>Stabilize</button>
             </div>
           </div>
         `;
@@ -334,7 +335,7 @@ const mainViews = createMainViews({
   zoneSelector,
 });
 
-const secondaryViews = createSecondaryViews({
+  const secondaryViews = createSecondaryViews({
   SLOT_ORDER,
   SLOT_NAMES,
   ZONES,
@@ -371,9 +372,10 @@ const secondaryViews = createSecondaryViews({
   getForgePityStatus,
   getForgeState,
   pager,
-  expeditionTimerText,
-  jobTimerText,
-  pageLead,
+    expeditionTimerText,
+    jobTimerText,
+    getStoreMeta,
+    pageLead,
   sectionHeader,
   infoCard,
   actionButton,
@@ -397,12 +399,57 @@ export function renderContent() {
     mascota: secondaryViews.renderMascota,
     logros: secondaryViews.renderLogros,
     diario: secondaryViews.renderDiario,
+    configuracion: secondaryViews.renderConfiguracion,
   };
   const fn = views[state.currentView] || mainViews.renderResumen;
   return fn();
 }
 
 export function renderModal() {
+  if (!state.player.onboardingCompleted) {
+    const pendingName = (state.ui.pendingPlayerName || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    return `
+      <div class="fixed inset-0 z-[90] bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(34,211,238,0.12),transparent),linear-gradient(180deg,#020617_0%,#0b1220_55%,#101a2f_100%)] p-4 overflow-y-auto">
+        <div class="min-h-full flex items-center justify-center py-6">
+          <div class="w-full max-w-2xl glass-strong rounded-[2rem] p-6 sm:p-8">
+            <div class="inline-flex items-center gap-2 text-[11px] uppercase tracking-[.24em] text-cyan-200/75">
+              <span class="inline-block h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,.65)]"></span>
+              Flujo de inicio
+            </div>
+            <h2 class="mt-3 text-3xl sm:text-4xl font-display font-extrabold leading-tight">Bienvenido a Aether Arena</h2>
+            <p class="mt-3 text-sm sm:text-base text-slate-300/78">Antes de empezar, define el nombre de tu gladiador. Este perfil sera la base de tu progresion, registro y metajuego.</p>
+
+            <div class="mt-6 grid sm:grid-cols-3 gap-3">
+              ${infoCard('Paso 1', 'Crea tu identidad', 'surface-subtle')}
+              ${infoCard('Paso 2', 'Confirma el nombre', 'surface-subtle')}
+              ${infoCard('Paso 3', 'Comienza la partida', 'surface-subtle')}
+            </div>
+
+            <div class="mt-6 glass rounded-2xl p-4 sm:p-5">
+              <label for="new-game-name" class="text-xs uppercase tracking-[.18em] text-slate-300/60">Nombre del gladiador</label>
+              <input
+                id="new-game-name"
+                type="text"
+                maxlength="22"
+                autocomplete="nickname"
+                spellcheck="false"
+                value="${pendingName}"
+                oninput="game.setPendingPlayerName(this.value)"
+                placeholder="Ej. Lysandra"
+                class="mt-2 w-full rounded-xl border border-white/12 bg-slate-950/55 px-4 py-3 text-base text-slate-100 placeholder:text-slate-400/70 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              />
+              <div class="mt-3 text-xs text-slate-300/62">Usa entre 2 y 22 caracteres. Puedes cambiarlo luego iniciando una nueva partida.</div>
+              <div class="mt-4 grid sm:grid-cols-2 gap-3">
+                <button type="button" class="btn" onclick="game.suggestPlayerName()">Nombre sugerido</button>
+                <button type="button" class="btn btn-primary" onclick="game.completeNewGameOnboarding()">Comenzar aventura</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   const modal = state.ui.modal;
   if (!modal) return '';
   return `

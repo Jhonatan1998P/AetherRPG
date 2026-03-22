@@ -199,10 +199,18 @@ export function createMainViews(deps) {
                   : infoCard('Sin mascota activa', 'Incuba una en la vista de Mascota.', 'surface-subtle')}
               </div>
               <div class="grid grid-cols-2 gap-2 mt-4">
-                <button type="button" class="btn btn-success" onclick="game.usePotion()" ${tooltipAttr('Consume una poción para recuperar salud fuera de combate.')}>🧪 Poción</button>
-                <button type="button" class="btn btn-primary" onclick="game.autoHeal()" ${tooltipAttr('Aplica una curación automática si tienes recursos disponibles.')}>🩹 Curar</button>
-                <button type="button" class="btn btn-gold" onclick="game.claimDaily()" ${tooltipAttr('Reclama tu recompensa diaria cuando esté lista.')}>🎁 Diario</button>
-                <button type="button" class="btn" onclick="game.setView('mascota')" ${tooltipAttr('Abre la gestión de tu mascota activa y sus bonificaciones.')}>🐾 Mascota</button>
+                <button type="button" class="btn btn-success" onclick="game.usePotion()" ${tooltipAttr('Consume una poción para recuperar vida al instante fuera de combate. Útil cuando quieres volver a arena sin esperar regeneración.')}>🧪 Poción</button>
+                <button type="button" class="btn btn-primary" onclick="game.autoHeal()" ${tooltipAttr('Ejecuta una curación automática usando recursos disponibles. Ideal para estabilizarte rápido antes de una pelea exigente.')}>🩹 Curar</button>
+                <button type="button" class="btn btn-gold" onclick="game.claimDaily()" ${tooltipAttr('Reclama la recompensa diaria cuando el ciclo esté listo. Suele aportar oro, consumibles y empuje temprano de sesión.')}>🎁 Diario</button>
+                <button type="button" class="btn" onclick="game.setView('mascota')" ${tooltipAttr('Abre la vista de mascota para revisar bonos activos, nivel y progreso del compañero.')}>🐾 Mascota</button>
+              </div>
+            </div>
+
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Gestión de partida', 'Reinicio completo')}
+              <p class="text-sm text-slate-300/75 mt-2">Puedes cambiar tu identidad sin perder progreso. Para eliminar cuenta o reiniciar desde cero, ve a Configuración.</p>
+              <div class="grid sm:grid-cols-1 gap-3 mt-4">
+                <button type="button" class="btn" onclick="game.requestRenamePlayer()" ${tooltipAttr('Abre un formulario para cambiar el nombre del gladiador actual sin afectar progreso ni inventario.')}>✏️ Renombrar</button>
               </div>
             </div>
           </aside>
@@ -249,7 +257,7 @@ export function createMainViews(deps) {
                 <div class="text-xs uppercase tracking-[.18em] text-slate-300/55">Filtro por tipo</div>
                 <div class="filters-row mt-2">
                   ${['all', ...SLOT_ORDER].map((itemFilter) => `
-                    <button type="button" class="btn filter-pill ${filter === itemFilter ? 'active tab-btn' : ''}" onclick="game.setInventoryFilter('${itemFilter}')" ${tooltipAttr(`Filtrar inventario por ${translateFilter(itemFilter).toLowerCase()}.`)}>${translateFilter(itemFilter)}</button>
+                    <button type="button" class="btn filter-pill ${filter === itemFilter ? 'active tab-btn' : ''}" onclick="game.setInventoryFilter('${itemFilter}')" ${tooltipAttr(`Filtra la mochila por ${translateFilter(itemFilter).toLowerCase()} para comparar piezas similares con mayor precisión.`)}>${translateFilter(itemFilter)}</button>
                   `).join('')}
                 </div>
               </div>
@@ -266,7 +274,7 @@ export function createMainViews(deps) {
                 </summary>
                 <div class="filters-row mt-3">
                   ${['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'ascendant'].map((itemFilter) => `
-                    <button type="button" class="btn filter-pill ${filter === itemFilter ? 'active tab-btn' : ''}" onclick="game.setInventoryFilter('${itemFilter}')" ${tooltipAttr(`Filtrar inventario por ${translateFilter(itemFilter).toLowerCase()}.`)}>${translateFilter(itemFilter)}</button>
+                    <button type="button" class="btn filter-pill ${filter === itemFilter ? 'active tab-btn' : ''}" onclick="game.setInventoryFilter('${itemFilter}')" ${tooltipAttr(`Muestra solo piezas de rareza ${translateFilter(itemFilter).toLowerCase()} para optimizar decisiones de venta, reciclaje o mejora.`)}>${translateFilter(itemFilter)}</button>
                   `).join('')}
                 </div>
               </details>

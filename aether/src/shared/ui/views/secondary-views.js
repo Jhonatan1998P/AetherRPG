@@ -38,6 +38,7 @@ export function createSecondaryViews(deps) {
     pager,
     expeditionTimerText,
     jobTimerText,
+    getStoreMeta,
     pageLead,
     sectionHeader,
     infoCard,
@@ -182,12 +183,12 @@ export function createSecondaryViews(deps) {
       .map((kind) => resourceOffer(kind))
       .filter(Boolean);
     const supportMeta = {
-      potion: { icon: '🧪', tone: 'btn-success', desc: 'Recuperación directa para sostener progreso en combate.' },
-      key: { icon: '🗝️', tone: 'btn-violet', desc: 'Abre acceso a rutas de mazmorra y progresión de piso.' },
-      essence: { icon: '✨', tone: 'btn-primary', desc: 'Material base para mejoras y rutas de forja.' },
-      catalyst: { icon: '🧿', tone: '', desc: 'Consumible premium para forja profunda y trascendencia.' },
-      sigil: { icon: '🔷', tone: '', desc: 'Recurso clave para acciones avanzadas de equipo.' },
-      food: { icon: '🍖', tone: '', desc: 'Soporte para trabajo, mascota y economía de ciclo.' },
+      potion: { icon: '🧪', tone: 'btn-success', desc: 'Recuperación directa para mantenerte combatiendo sin pausas largas.' },
+      key: { icon: '🗝️', tone: 'btn-violet', desc: 'Permite entrar a mazmorras y empujar progresión de pisos.' },
+      essence: { icon: '✨', tone: 'btn-primary', desc: 'Material base para forja, mejoras y conversiones.' },
+      catalyst: { icon: '🧿', tone: '', desc: 'Componente avanzado para acciones de forja profunda y trascendencia.' },
+      sigil: { icon: '🔷', tone: '', desc: 'Recurso especializado para mejoras de mayor impacto.' },
+      food: { icon: '🍖', tone: '', desc: 'Apoyo de ciclo para trabajo, mascota y estabilidad de recursos.' },
     };
 
     return `
@@ -236,7 +237,7 @@ export function createSecondaryViews(deps) {
                 const compare = compareAgainstEquipped(item);
                 const canBuy = (item.price || 0) <= state.player.gold;
                 return `
-                  <div class="glass rounded-2xl p-4 market-card ${canBuy ? '' : 'opacity-80'}" ${tooltipAttr(`Oferta de rareza ${rarityName(item.rarity)}. Precio ${fmt(item.price)} de oro. ${compare.detail}`)}>
+                  <div class="glass rounded-2xl p-4 market-card ${canBuy ? '' : 'opacity-80'}" ${tooltipAttr(`Oferta ${rarityName(item.rarity)} por ${fmt(item.price)} de oro. ${compare.detail} Compara coste frente a forja antes de comprar.`)}>
                     <div class="flex items-start justify-between gap-3">
                       <div>
                         <div class="flex flex-wrap items-center gap-2"><div class="font-black rarity-${item.rarity} leading-snug">${item.name}</div>${rarityBadge(item.rarity)}</div>
@@ -274,10 +275,10 @@ export function createSecondaryViews(deps) {
               ${sectionHeader('Soporte', 'Consumibles útiles')}
               <div class="grid gap-2">
                 ${supportOffers.map((entry) => {
-                  const meta = supportMeta[entry.kind] || { icon: '•', tone: '', desc: 'Consumible de soporte.' };
+                  const meta = supportMeta[entry.kind] || { icon: '•', tone: '', desc: 'Consumible de soporte para mantener el ciclo.' };
                   const qty = Object.values(entry.reward || {}).reduce((sumValue, value) => sumValue + Number(value || 0), 0);
                   const label = qty > 1 ? `${entry.label} x${qty}` : entry.label;
-                  return `<button type="button" class="btn ${meta.tone}" onclick="game.buyResource('${entry.kind}')" ${tooltipAttr(`${meta.desc} Precio dinámico según nivel y poder actual: ${fmt(entry.price)} de oro.`)}>${meta.icon} ${label} · ${fmt(entry.price)} oro</button>`;
+                  return `<button type="button" class="btn ${meta.tone}" onclick="game.buyResource('${entry.kind}')" ${tooltipAttr(`${meta.desc} Precio dinámico según nivel y poder actual: ${fmt(entry.price)} de oro. Compra solo si acelera tu siguiente objetivo.`)}>${meta.icon} ${label} · ${fmt(entry.price)} oro</button>`;
                 }).join('')}
               </div>
             </div>
@@ -378,8 +379,8 @@ export function createSecondaryViews(deps) {
                   <div class="font-bold">${SLOT_NAMES[slot]}</div>
                   <div class="text-sm text-slate-300/70 mt-1">Pieza aleatoria del hueco con presupuesto por nivel y rareza.</div>
                     <div class="grid gap-2 mt-3 text-xs text-slate-300/74">
-                      <div class="rounded-xl bg-white/[.04] p-2.5" ${tooltipAttr('Coste y tabla de outcomes de la receta básica.')}>Básica: <b>${formatCost(basic.cost)}</b><br><span class="text-slate-300/62">${formatOutcomes(basic.outcomes)}</span></div>
-                      <div class="rounded-xl bg-white/[.04] p-2.5" ${tooltipAttr('Coste y tabla de outcomes de la receta avanzada.')}>Avanzada: <b>${formatCost(advanced.cost)}</b><br><span class="text-slate-300/62">${formatOutcomes(advanced.outcomes)}</span></div>
+                      <div class="rounded-xl bg-white/[.04] p-2.5" ${tooltipAttr('Receta básica: coste reducido y resultado más estable. Útil para volumen y progreso temprano de equipo.')}>Básica: <b>${formatCost(basic.cost)}</b><br><span class="text-slate-300/62">${formatOutcomes(basic.outcomes)}</span></div>
+                      <div class="rounded-xl bg-white/[.04] p-2.5" ${tooltipAttr('Receta avanzada: mayor coste, mejor piso de rareza y más techo de calidad.')}>Avanzada: <b>${formatCost(advanced.cost)}</b><br><span class="text-slate-300/62">${formatOutcomes(advanced.outcomes)}</span></div>
                       <div class="rounded-xl bg-white/[.04] p-2.5">Escenario: <b>${Math.round((advanced.scenarioChances.favorable || 0) * 100)}%</b> favorable · <b>${Math.round((advanced.scenarioChances.neutral || 0) * 100)}%</b> neutral · <b>${Math.round((advanced.scenarioChances.unfavorable || 0) * 100)}%</b> desfavorable</div>
                     </div>
                     <div class="grid grid-cols-2 gap-2 mt-3">
@@ -414,12 +415,12 @@ export function createSecondaryViews(deps) {
                       ${item && stabilize ? `<div class="text-xs text-slate-300/62 mt-1">Stabilize: ${Math.round(stabilize.successChance * 100)}% · coste ${formatCost(stabilize.cost)}</div>` : ''}
                       ${item && transcend ? `<div class="text-xs text-slate-300/62 mt-1">Transcend: ${Math.round(transcend.successChance * 100)}% · ${transcend.from} → ${transcend.to}</div>` : ''}
                       <div class="grid grid-cols-2 gap-2 mt-3">
-                        <button type="button" class="btn btn-gold !py-2" ${item ? `onclick="game.enhanceItem('${slot}')"` : 'disabled'} ${tooltipAttr('Mejora incremental estable de la pieza equipada.')}>Enhance</button>
-                        <button type="button" class="btn btn-violet !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'total'})"` : 'disabled'} ${tooltipAttr('Reroll completo: menor coste, mayor varianza.')}>Reforge total</button>
-                        <button type="button" class="btn !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'partial'})"` : 'disabled'} ${tooltipAttr('Reroll parcial: mayor coste, varianza moderada.')}>Reforge parcial</button>
-                        <button type="button" class="btn !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'lock'})"` : 'disabled'} ${tooltipAttr('Bloquea tu stat principal y reduce varianza.')}>Reforge bloqueo</button>
-                        <button type="button" class="btn !py-2" ${item && stabilize ? `onclick="game.stabilizeItem('${item.id}')"` : 'disabled'} ${tooltipAttr('Estabiliza la pieza para mejorar consistencia y calidad sin destruirla.')}>Stabilize</button>
-                        <button type="button" class="btn !py-2 col-span-2" ${item && transcend ? `onclick="game.transcendItem('${item.id}')"` : 'disabled'} ${tooltipAttr('Evoluciona la rareza si cumples requisitos y coste de transcend.')}>Transcend</button>
+                        <button type="button" class="btn btn-gold !py-2" ${item ? `onclick="game.enhanceItem('${slot}')"` : 'disabled'} ${tooltipAttr('Mejora incremental y relativamente estable de la pieza equipada. Recomendado cuando ya estás conforme con sus afijos.')}>Enhance</button>
+                        <button type="button" class="btn btn-violet !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'total'})"` : 'disabled'} ${tooltipAttr('Retemplado total: vuelve a tirar la pieza completa. Menor coste, pero con mayor varianza en resultado final.')}>Reforge total</button>
+                        <button type="button" class="btn !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'partial'})"` : 'disabled'} ${tooltipAttr('Retemplado parcial: conserva más estructura de la pieza. Cuesta más, pero reduce cambios extremos.')}>Reforge parcial</button>
+                        <button type="button" class="btn !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'lock'})"` : 'disabled'} ${tooltipAttr('Retemplado con bloqueo: protege tu stat principal para minimizar pérdidas en la tirada.')}>Reforge bloqueo</button>
+                        <button type="button" class="btn !py-2" ${item && stabilize ? `onclick="game.stabilizeItem('${item.id}')"` : 'disabled'} ${tooltipAttr('Estabiliza la pieza para mejorar consistencia y control de varianza sin destruirla.')}>Stabilize</button>
+                        <button type="button" class="btn !py-2 col-span-2" ${item && transcend ? `onclick="game.transcendItem('${item.id}')"` : 'disabled'} ${tooltipAttr('Trascender intenta elevar la rareza. Exige requisitos y coste alto, pero abre un techo de poder superior.')}>Transcend</button>
                       </div>
                     </div>
                   `;
@@ -453,11 +454,11 @@ export function createSecondaryViews(deps) {
 
   function renderGremio() {
     const descriptions = {
-      barracks: 'Más ataque y defensa global.',
-      treasury: 'Más oro en todas las actividades.',
-      sanctuary: 'Más vida máxima y regeneración.',
-      hunters: 'Mejor botín y hallazgos más finos.',
-      arsenal: 'Más capacidad de inventario.',
+      barracks: 'Aumenta ataque y defensa global para sostener mejor combate activo y mazmorras.',
+      treasury: 'Incrementa el oro obtenido en todas las actividades para acelerar economía y compras.',
+      sanctuary: 'Eleva vida máxima y regeneración para mejorar supervivencia en sesiones largas.',
+      hunters: 'Mejora suerte y calidad de botín, útil para encontrar piezas de mayor techo.',
+      arsenal: 'Amplía capacidad de inventario para reducir limpieza forzada y mantener opciones.',
     };
 
     return `
@@ -582,7 +583,7 @@ export function createSecondaryViews(deps) {
                     <div class="rounded-xl bg-white/[.04] p-2">Pago <b>${fmt(job.reward.gold)} oro</b></div>
                     <div class="rounded-xl bg-white/[.04] p-2">Coste <b>${energyCost}E / ${staminaCost}A</b></div>
                   </div>
-                  <button type="button" class="btn btn-gold mt-3 w-full" onclick="game.startJob('${job.id}')" ${tooltipAttr('Inicia este trabajo y bloquea el temporizador hasta su finalización.')}>Aceptar</button>
+                  <button type="button" class="btn btn-gold mt-3 w-full" onclick="game.startJob('${job.id}')" ${tooltipAttr('Inicia este trabajo y activa un temporizador único hasta finalizar. Es una fuente estable de oro y recursos secundarios.')}>Aceptar</button>
                 </div>
                 `;
               }).join('')}
@@ -626,7 +627,7 @@ export function createSecondaryViews(deps) {
                 </div>
                 <div class="grid sm:grid-cols-2 gap-3 mt-4">
                   <button type="button" class="btn btn-success" onclick="game.feedPet()">${icon('box', 'h-4 w-4')}<span>Alimentar</span></button>
-                  <button type="button" class="btn btn-danger" onclick="game.releasePet()" ${tooltipAttr('Libera la mascota actual y pierdes sus bonos activos.')}>Liberar</button>
+                  <button type="button" class="btn btn-danger" onclick="game.releasePet()" ${tooltipAttr('Libera la mascota activa de forma permanente. Perderás sus bonos y progreso acumulado del compañero actual.')}>Liberar</button>
                 </div>
               </div>
             ` : `
@@ -689,7 +690,7 @@ export function createSecondaryViews(deps) {
             <div class="glass rounded-3xl p-5">
               ${sectionHeader('Decisión', 'Ascensión')}
               <p class="text-sm text-slate-300/75 mt-2">Actívala cuando quieras convertir una partida avanzada en progreso permanente.</p>
-              <button type="button" class="btn btn-gold mt-4 w-full" onclick="game.ascend()" ${tooltipAttr('Reinicia gran parte de la partida a cambio de progreso meta permanente.')}>🔱 Ascender</button>
+              <button type="button" class="btn btn-gold mt-4 w-full" onclick="game.ascend()" ${tooltipAttr('Reinicia gran parte de la partida para obtener progreso meta permanente. Conviene hacerlo cuando el avance actual ya se ralentiza.')}>🔱 Ascender</button>
             </div>
 
             <div class="glass rounded-3xl p-5">
@@ -701,7 +702,7 @@ export function createSecondaryViews(deps) {
                   ['vitality', 'Vitalidad'],
                   ['momentum', 'Impulso'],
                 ].map(([key, title]) => `
-                  <button type="button" class="btn btn-violet justify-between" onclick="game.spendRelic('${key}')" ${tooltipAttr(`Invierte polvo de reliquia en ${title.toLowerCase()} para obtener bonificaciones permanentes.`)}><span>${title}</span><span>Nv ${state.player.relics[key]}</span></button>
+                  <button type="button" class="btn btn-violet justify-between" onclick="game.spendRelic('${key}')" ${tooltipAttr(`Invierte polvo de reliquia en ${title.toLowerCase()} para fortalecer bonificaciones permanentes de cuenta. Prioriza el área que más use tu build.`)}><span>${title}</span><span>Nv ${state.player.relics[key]}</span></button>
                 `).join('')}
               </div>
             </div>
@@ -753,6 +754,76 @@ export function createSecondaryViews(deps) {
     `;
   }
 
+  function renderConfiguracion() {
+    const meta = getStoreMeta ? getStoreMeta() : { isSaving: false, isDirty: false, lastSaveAt: 0 };
+    const saveLabel = meta.isSaving
+      ? 'Guardando...'
+      : meta.isDirty
+        ? 'Cambios pendientes'
+        : meta.lastSaveAt
+          ? `Guardado ${new Date(meta.lastSaveAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+          : 'Sin guardado';
+    const saveTone = meta.isSaving ? 'warning' : (meta.isDirty ? 'danger' : 'success');
+
+    return `
+      <div class="space-y-5">
+        ${pageLead('configuracion', `Estado de guardado: <b>${saveLabel}</b>`, [
+          actionButton('💾 Guardar ahora', 'btn-primary', 'game.saveNow()', 'Fuerza un guardado inmediato de la partida actual.'),
+          actionButton('✏️ Renombrar personaje', '', 'game.requestRenamePlayer()', 'Cambia el nombre del gladiador sin perder progreso.'),
+          actionButton('🗑️ Eliminar cuenta', 'btn-danger', 'game.requestNewGameReset()', 'Borra todos los datos locales y reinicia el juego desde cero.')
+        ].join(''))}
+
+        <div class="grid xl:grid-cols-[1fr,320px] gap-5">
+          <section class="glass rounded-3xl p-5">
+            ${sectionHeader('Preferencias', 'Guardado e interfaz', 'Ajustes de comodidad para adaptar el ritmo de juego sin tocar el balance.')}
+
+            <div class="grid sm:grid-cols-2 gap-3">
+              ${infoCard('Guardado automático', state.ui.autoSave ? 'Activo: el juego guarda cambios de forma periódica.' : 'Desactivado: deberías usar Guardar ahora antes de salir.', 'surface-subtle')}
+              ${infoCard('Estado actual', `<span class="status-chip ${saveTone}">${saveLabel}</span>`, 'surface-subtle')}
+            </div>
+
+            <div class="mt-4 grid sm:grid-cols-2 gap-3">
+              <button type="button" class="btn ${state.ui.autoSave ? 'btn-primary' : ''}" onclick="game.setAutoSaveEnabled(true)" ${tooltipAttr('Activa guardado automático para no perder progreso ante cierres inesperados.')}>Auto-guardado ON</button>
+              <button type="button" class="btn ${!state.ui.autoSave ? 'btn-danger' : ''}" onclick="game.requestDisableAutoSave()" ${!state.ui.autoSave ? 'disabled' : ''} ${tooltipAttr('Desactiva guardado automático con confirmación previa. Recomendado solo si quieres control manual total del guardado.')}>Auto-guardado OFF</button>
+            </div>
+
+            <div class="mt-6 grid sm:grid-cols-2 gap-4">
+              <div class="surface-subtle rounded-2xl p-4">
+                <div class="text-xs uppercase tracking-[.18em] text-slate-300/55">Inventario</div>
+                <div class="text-sm text-slate-300/76 mt-2">Objetos por página: <b>${state.ui.inventoryPageSize}</b></div>
+                <div class="grid grid-cols-4 gap-2 mt-3">
+                  ${[12, 18, 24, 30].map((size) => `<button type="button" class="btn !py-2 ${state.ui.inventoryPageSize === size ? 'btn-primary' : ''}" onclick="game.setInventoryPageSize(${size})">${size}</button>`).join('')}
+                </div>
+              </div>
+
+              <div class="surface-subtle rounded-2xl p-4">
+                <div class="text-xs uppercase tracking-[.18em] text-slate-300/55">Diario</div>
+                <div class="text-sm text-slate-300/76 mt-2">Entradas por página: <b>${state.ui.journalPageSize}</b></div>
+                <div class="grid grid-cols-4 gap-2 mt-3">
+                  ${[12, 16, 24, 32].map((size) => `<button type="button" class="btn !py-2 ${state.ui.journalPageSize === size ? 'btn-primary' : ''}" onclick="game.setJournalPageSize(${size})">${size}</button>`).join('')}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="stack-compact">
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Cuenta', 'Acciones críticas')}
+              <div class="grid gap-3">
+                ${infoCard('Renombrar', 'Actualiza la identidad visible del personaje sin tocar progreso, equipo ni recursos.', 'surface-subtle')}
+                ${infoCard('Eliminar cuenta', 'Borra todo el guardado local y vuelve al flujo inicial de creación de partida.', 'surface-subtle')}
+              </div>
+              <div class="grid gap-2 mt-4">
+                <button type="button" class="btn" onclick="game.requestRenamePlayer()">✏️ Renombrar gladiador</button>
+                <button type="button" class="btn btn-danger" onclick="game.requestNewGameReset()">🗑️ Eliminar cuenta</button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    `;
+  }
+
   return {
     renderExpedicion,
     renderMazmorra,
@@ -764,5 +835,6 @@ export function createSecondaryViews(deps) {
     renderMascota,
     renderLogros,
     renderDiario,
+    renderConfiguracion,
   };
 }

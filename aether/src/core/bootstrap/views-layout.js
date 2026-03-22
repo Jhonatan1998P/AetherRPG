@@ -66,7 +66,7 @@ export function renderHud() {
           </div>
 
           <div class="space-y-3">
-            <div data-tooltip="Salud actual sobre tu vida máxima.">
+            <div data-tooltip="Salud actual frente a tu vida máxima. Si cae demasiado, conviene pausar daño y priorizar curación o defensa.">
               <div class="mb-1 flex items-center justify-between gap-3 text-xs text-slate-300/80">
                 <span class="font-medium tracking-[0.01em]">Vida</span>
                 <span class="font-semibold text-slate-100" data-hud-current="hp">${fmt(state.player.hp)} / ${fmt(ds.maxHp)}</span>
@@ -77,7 +77,7 @@ export function renderHud() {
                 </span>
               </div>
             </div>
-            <div data-tooltip="Recurso principal para varias acciones activas.">
+            <div data-tooltip="Energía disponible para acciones activas como arena, mazmorra y utilidades. Si se agota, se frena tu ritmo de progreso.">
               <div class="mb-1 flex items-center justify-between gap-3 text-xs text-slate-300/80">
                 <span class="font-medium tracking-[0.01em]">Energía</span>
                 <span class="font-semibold text-slate-100" data-hud-current="energy">${fmt(state.player.energy)} / ${fmt(ds.maxEnergy)}</span>
@@ -88,7 +88,7 @@ export function renderHud() {
                 </span>
               </div>
             </div>
-            <div data-tooltip="Marca cuántas actividades físicas puedes sostener.">
+            <div data-tooltip="Aguante para sostener actividades exigentes y rutas largas. Gestionarlo bien evita quedarte bloqueado en decisiones clave.">
               <div class="mb-1 flex items-center justify-between gap-3 text-xs text-slate-300/80">
                 <span class="font-medium tracking-[0.01em]">Aguante</span>
                 <span class="font-semibold text-slate-100" data-hud-current="stamina">${fmt(state.player.stamina)} / ${fmt(ds.maxStamina)}</span>
@@ -113,10 +113,10 @@ export function renderHud() {
           <div class="glass rounded-2xl p-4">
             <div class="text-[11px] uppercase tracking-[.2em] text-cyan-200/62 mb-2">Acciones inmediatas</div>
             <div class="grid grid-cols-2 gap-2">
-              <button class="btn btn-success !py-2.5" onclick="game.usePotion()" ${tooltipAttr('Consume una poción para recuperar salud y sostener el ritmo de juego.')}>${withIcon('flask', 'Poción')}</button>
-              <button class="btn btn-primary !py-2.5" onclick="game.autoManage()" ${tooltipAttr('Limpia inventario vendiendo y reciclando excedentes.')}>${withIcon('broom', 'Limpiar')}</button>
-              <button class="btn !py-2.5" onclick="game.setView('arena')" ${tooltipAttr('Abre la arena para continuar progreso activo.')}>${withIcon('swords', 'Arena')}</button>
-              <button class="btn !py-2.5" onclick="game.setView('inventario')" ${tooltipAttr('Abre inventario para comparar y equipar mejoras.')}>${withIcon('backpack', 'Inventario')}</button>
+              <button class="btn btn-success !py-2.5" onclick="game.usePotion()" ${tooltipAttr('Consume una poción para recuperar vida al instante. Úsala cuando la barra roja limite tu siguiente combate.')}>${withIcon('flask', 'Poción')}</button>
+              <button class="btn btn-primary !py-2.5" onclick="game.autoManage()" ${tooltipAttr('Gestiona excedentes de mochila vendiendo y reciclando automáticamente. Libera espacio sin revisar pieza por pieza.')}>${withIcon('broom', 'Limpiar')}</button>
+              <button class="btn !py-2.5" onclick="game.setView('arena')" ${tooltipAttr('Abre Arena para progreso activo: oro, experiencia y botín inmediato según tu zona actual.')}>${withIcon('swords', 'Arena')}</button>
+              <button class="btn !py-2.5" onclick="game.setView('inventario')" ${tooltipAttr('Abre Inventario para comparar equipo, aplicar filtros y equipar mejoras con impacto real.')}>${withIcon('backpack', 'Inventario')}</button>
             </div>
           </div>
         </aside>
@@ -171,8 +171,8 @@ export function renderDesktopNav() {
       <div class="space-y-2">
         <div class="text-[11px] uppercase tracking-[.18em] text-slate-300/45">Acciones rápidas</div>
         <div class="grid grid-cols-2 gap-2">
-          <button class="btn btn-success !py-2.5" onclick="game.usePotion()" ${tooltipAttr('Consume una poción para recuperar salud y seguir combatiendo.')}>${withIcon('flask', 'Poción')}</button>
-          <button class="btn btn-primary !py-2.5" onclick="game.autoManage()" ${tooltipAttr('Vende o recicla excedentes para despejar la mochila.')}>${withIcon('broom', 'Limpiar')}</button>
+          <button class="btn btn-success !py-2.5" onclick="game.usePotion()" ${tooltipAttr('Recupera vida de forma inmediata para mantenerte en combate. Recomendado antes de entrar a élite o mazmorra.')}>${withIcon('flask', 'Poción')}</button>
+          <button class="btn btn-primary !py-2.5" onclick="game.autoManage()" ${tooltipAttr('Despeja mochila vendiendo y reciclando sobrantes. Mantener espacio evita perder mejoras por límite de capacidad.')}>${withIcon('broom', 'Limpiar')}</button>
         </div>
       </div>
     </div>

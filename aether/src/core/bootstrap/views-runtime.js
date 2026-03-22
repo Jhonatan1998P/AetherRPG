@@ -78,9 +78,16 @@ function infoCard(title, body, tone = '', tooltip = '') {
     `;
 }
 
+function defaultActionTooltip(label) {
+  const clean = stripHtml(label).replace(/\s+/g, ' ').trim();
+  if (!clean) return 'Acción rápida disponible en esta vista.';
+  return `Acción rápida: ${clean}. Úsala para avanzar en el flujo actual sin perder contexto.`;
+}
+
 function actionButton(label, className, onClick, tooltip = '') {
   const cleanLabel = escapeAttr(stripHtml(label));
-  return `<button type="button" class="btn ${className}" onclick="${onClick}" aria-label="${cleanLabel}" ${tooltipAttr(tooltip || stripHtml(label))}>${replaceEmojiIcons(label)}</button>`;
+  const tip = tooltip || defaultActionTooltip(label);
+  return `<button type="button" class="btn ${className}" onclick="${onClick}" aria-label="${cleanLabel}" ${tooltipAttr(tip)}>${replaceEmojiIcons(label)}</button>`;
 }
 
 function actionBar(actions) {

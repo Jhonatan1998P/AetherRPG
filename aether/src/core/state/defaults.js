@@ -56,6 +56,9 @@ export function createDefaultsModule(deps) {
         inventoryPageSize: 18,
         journalPage: 1,
         journalPageSize: 16,
+        autoSave: true,
+        pendingPlayerName: '',
+        pendingRenameName: '',
         modal: null,
         forgePreview: null,
         forgeReforgeMode: 'total',
@@ -65,6 +68,7 @@ export function createDefaultsModule(deps) {
       player: {
         name: 'Aurelio',
         title: 'Novato del Coliseo',
+        onboardingCompleted: false,
         level: 1,
         xp: 0,
         gold: 260,

@@ -232,6 +232,9 @@ import { createPersistenceModule } from '../state/persistence.js';
     if (!state.streak) state.streak = defaults.streak;
     if (!state.timers) state.timers = defaults.timers;
     if (!state.ui) state.ui = defaults.ui;
+    if (typeof state.ui.autoSave !== 'boolean') state.ui.autoSave = true;
+    if (typeof state.ui.pendingPlayerName !== 'string') state.ui.pendingPlayerName = '';
+    if (typeof state.ui.pendingRenameName !== 'string') state.ui.pendingRenameName = '';
     migrateLegacyState(defaults);
     state.ui.inventoryFilter = state.ui.inventoryFilter || 'all';
     state.ui.inventoryPage = Math.max(1, Number(state.ui.inventoryPage) || 1);
@@ -242,6 +245,9 @@ import { createPersistenceModule } from '../state/persistence.js';
       state.ui.collapsedCardsByView = {};
     }
     state.ui.forgeReforgeMode = state.ui.forgeReforgeMode || 'total';
+    if (typeof state.player.onboardingCompleted !== 'boolean') {
+      state.player.onboardingCompleted = true;
+    }
 
     if (!state.player.forge.actionPity || typeof state.player.forge.actionPity !== 'object') {
       state.player.forge.actionPity = clone(defaults.player.forge.actionPity);
