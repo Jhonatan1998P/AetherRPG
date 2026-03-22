@@ -164,6 +164,12 @@ const RESOURCE_CATALOG_BASE = {
   },
 };
 
+const CRAFT_GOLD_TARGET_RATIOS = {
+  basic: { early: 0.095, mid: 0.105, late: 0.118 },
+  advanced: { early: 0.165, mid: 0.175, late: 0.195 },
+  apex: { early: 0.23, mid: 0.245, late: 0.27 },
+};
+
 export function createEconomyDomain(deps) {
   const {
     FORGE_SCHOOLS,
@@ -533,7 +539,11 @@ export function createEconomyDomain(deps) {
     let factor = 1;
 
     if (mode === 'sell') {
-      if (source === 'forge' && ageMinutes < 30) factor *= 0.62;
+      if (source === 'forge') {
+        if (ageMinutes < 20) factor *= 0.4;
+        else if (ageMinutes < 60) factor *= 0.52;
+        else if (ageMinutes < 180) factor *= 0.74;
+      }
       if (source === 'market' && ageMinutes < 12) factor *= 0.76;
       if (source === 'legacy' && ageMinutes < 2) factor *= 0.9;
       factor *= 1 - Math.min(0.28, (item.reforge || 0) * 0.04);
@@ -840,6 +850,9 @@ export function createEconomyDomain(deps) {
     const levelMult = 1 + Math.max(0, state.player.level - 1) * 0.018;
     const stage = currentForgeStage(state);
     const stageMult = stage === 'early' ? 0.97 : stage === 'late' ? 1.08 : 1;
+    const targetGoldHour = targetGoldPerHourForState(state);
+    const tierAnchors = CRAFT_GOLD_TARGET_RATIOS[tier] || CRAFT_GOLD_TARGET_RATIOS.basic;
+    const stageAnchor = Number(tierAnchors[stage] || tierAnchors.mid || 0.1);
     const costReduction = clamp(forge.mastery.costReduction || 0, 0, 0.32);
     const schoolMult = clamp((forge.school.costMult && forge.school.costMult.craft) || 1, 0.78, 1.24);
     const out = {};
@@ -849,6 +862,10 @@ export function createEconomyDomain(deps) {
         : value * slotMult * (1 + Math.max(0, state.player.level - 1) * 0.006) * stageMult * schoolMult * (1 - costReduction * 0.8);
       out[key] = Math.max(key === 'gold' ? 1 : 0, Math.round(scaled));
     });
+    const anchoredGoldFloor = Math.round(targetGoldHour * stageAnchor * slotMult);
+    if (Number(out.gold || 0) < anchoredGoldFloor) {
+      out.gold = anchoredGoldFloor;
+    }
     return out;
   }
 
