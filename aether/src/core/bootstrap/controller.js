@@ -788,26 +788,29 @@ import { AetherViewContent } from './views-content.js';
     document.addEventListener('mouseover', (event) => {
       if (isCoarsePointer()) return;
       const target = tooltipTargetFromEvent(event);
+      if (target && isButtonLikeTarget(target)) return;
       if (target) showTooltip(target);
     });
     document.addEventListener('mouseout', (event) => {
       if (isCoarsePointer()) return;
       const target = tooltipTargetFromEvent(event);
+      if (target && isButtonLikeTarget(target)) return;
       if (target) hideTooltip(target);
     });
     document.addEventListener('focusin', (event) => {
       const target = tooltipTargetFromEvent(event);
+      if (target && isButtonLikeTarget(target)) return;
       if (target) showTooltip(target);
     });
     document.addEventListener('focusout', (event) => {
       const target = tooltipTargetFromEvent(event);
+      if (target && isButtonLikeTarget(target)) return;
       if (target) hideTooltip(target);
     });
     document.addEventListener('pointerdown', (event) => {
-      if (!isCoarsePointer()) return;
       const target = tooltipTargetFromEvent(event);
       if (!target) {
-        hideTooltip();
+        if (isCoarsePointer()) hideTooltip();
         clearLongPressState();
         return;
       }
@@ -836,7 +839,6 @@ import { AetherViewContent } from './views-content.js';
       clearLongPressState();
     }, true);
     document.addEventListener('click', (event) => {
-      if (!isCoarsePointer()) return;
       const target = tooltipTargetFromEvent(event);
       if (!target) return;
       if (isButtonLikeTarget(target)) {
@@ -846,6 +848,7 @@ import { AetherViewContent } from './views-content.js';
         }
         return;
       }
+      if (!isCoarsePointer()) return;
       if (!isInteractiveTarget(target)) {
         event.preventDefault();
         event.stopPropagation();
