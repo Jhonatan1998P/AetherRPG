@@ -32,7 +32,12 @@ export function createStatsDomain(deps) {
     const pet = getPetData();
     const bonus = emptyStats();
     if (!pet || !state.player.petLevel) return bonus;
-    const mult = 1 + state.player.petLevel * 0.16;
+    const level = Math.max(1, Number(state.player.petLevel || 1));
+    const power = Math.max(0.9, Number(pet.power || 1));
+    const growth = (1 - Math.exp(-level / 18)) * 1.06;
+    const levelTail = Math.min(0.55, level * 0.012);
+    const powerAmp = 0.88 + (power - 1) * 0.42;
+    const mult = 1 + (growth + levelTail) * powerAmp;
     Object.entries(pet.bonus).forEach(([key, value]) => {
       bonus[key] = softRound((bonus[key] || 0) + value * mult, 4);
     });

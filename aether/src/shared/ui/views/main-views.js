@@ -6,6 +6,7 @@ export function createMainViews(deps) {
     state,
     maxInventory,
     getPetData,
+    petProgressMeta,
     getDerivedStats,
     currentRank,
     zoneForPlayer,
@@ -126,6 +127,7 @@ export function createMainViews(deps) {
     const ds = getDerivedStats();
     const rank = currentRank();
     const pet = getPetData();
+    const petProgress = petProgressMeta ? petProgressMeta() : null;
     const hpRatio = ds.maxHp ? Math.round((state.player.hp / ds.maxHp) * 100) : 100;
 
     return `
@@ -195,7 +197,7 @@ export function createMainViews(deps) {
               ${sectionHeader('Apoyos', 'Mascota y utilidades de sesión')}
               <div class="grid gap-3">
                 ${pet
-                  ? infoCard(`${icon(pet.icon || 'paw', 'h-4 w-4 inline-block mr-2 align-[-0.15em]')}${pet.name}`, `Nivel ${state.player.petLevel} · XP ${state.player.petXp}/${3 + state.player.petLevel}<br>${pet.desc}`, 'surface-subtle')
+                  ? infoCard(`${icon(pet.icon || 'paw', 'h-4 w-4 inline-block mr-2 align-[-0.15em]')}${pet.name}`, `Nivel ${state.player.petLevel} · XP ${state.player.petXp}/${petProgress ? petProgress.xpNeeded : Math.max(3, 3 + state.player.petLevel)}<br>${pet.desc}`, 'surface-subtle')
                   : infoCard('Sin mascota activa', 'Incuba una en la vista de Mascota.', 'surface-subtle')}
               </div>
               <div class="grid grid-cols-2 gap-2 mt-4">

@@ -192,6 +192,10 @@ import { createPersistenceModule } from '../state/persistence.js';
       state.player.catalysts = defaults.player.catalysts || 0;
     }
 
+    if (!state.player.petPity || typeof state.player.petPity !== 'object') {
+      state.player.petPity = clone(defaults.player.petPity);
+    }
+
     if (!state.player.forge || typeof state.player.forge !== 'object') {
       state.player.forge = clone(defaults.player.forge);
     }
@@ -219,6 +223,17 @@ import { createPersistenceModule } from '../state/persistence.js';
     if (!state.player.skillLevels) state.player.skillLevels = defaults.player.skillLevels;
     if (!state.player.activeSkills) state.player.activeSkills = defaults.player.activeSkills;
     if (!state.player.unlockedSkills) state.player.unlockedSkills = defaults.player.unlockedSkills;
+    if (!state.player.petPity || typeof state.player.petPity !== 'object') state.player.petPity = defaults.player.petPity;
+    state.player.petPity.rare = Math.max(0, Number(state.player.petPity.rare || 0));
+    state.player.petPity.epic = Math.max(0, Number(state.player.petPity.epic || 0));
+    state.player.petPity.mythic = Math.max(0, Number(state.player.petPity.mythic || 0));
+    state.player.petPity.total = Math.max(0, Number(state.player.petPity.total || 0));
+    state.player.petLevel = Math.max(0, Number(state.player.petLevel || 0));
+    state.player.petXp = Math.max(0, Number(state.player.petXp || 0));
+    if (!state.player.pet) {
+      state.player.petLevel = 0;
+      state.player.petXp = 0;
+    }
     if (typeof state.player.catalysts !== 'number') state.player.catalysts = defaults.player.catalysts || 0;
     if (!state.player.forge || typeof state.player.forge !== 'object') state.player.forge = defaults.player.forge;
     if (!state.quests) state.quests = defaults.quests;

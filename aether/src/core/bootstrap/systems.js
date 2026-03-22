@@ -11,6 +11,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     RANKS,
     ZONES,
     JOBS,
+    PET_RITUALS,
     PETS,
     SKILLS,
     ACHIEVEMENTS,
@@ -1544,47 +1545,359 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
 
   }
 
-  function hatchPet() {
+  const PET_TIER_ORDER = {
+    common: 1,
+    rare: 2,
+    epic: 3,
+    mythic: 4,
+  };
+
+  function petTierRank(tier) {
+    return PET_TIER_ORDER[tier] || PET_TIER_ORDER.common;
+  }
+
+  function petTierLabel(tier = 'common') {
+    return {
+      common: 'Comun',
+      rare: 'Rara',
+      epic: 'Epica',
+      mythic: 'Mitica',
+    }[tier] || 'Comun';
+  }
+
+  function petXpForNextLevel(pet = getPetData(), levelOverride = null) {
+    if (!pet || (!state.player.petLevel && !levelOverride)) return 0;
+    const petLevel = Math.max(1, Number(levelOverride || state.player.petLevel || 1));
+    const playerLevel = Math.max(1, Number(state.player.level || 1));
+    const ascension = Math.max(0, Number(state.player.ascension || 0));
+    const power = Math.max(0.9, Number(pet.power || 1));
+    const base = 1.8 + petLevel * 0.25;
+    const growth = Math.pow(petLevel, 1.03) * 0.12;
+    const powerTax = (power - 1) * 1.05;
+    const accountTax = Math.min(1.6, playerLevel * 0.011 + ascension * 0.13);
+    return Math.max(3, Math.round(base + growth + powerTax + accountTax));
+  }
+
+  function petGrowthMultiplier(pet = getPetData()) {
+    if (!pet || !state.player.petLevel) return 1;
+    const level = Math.max(1, Number(state.player.petLevel || 1));
+    const power = Math.max(0.9, Number(pet.power || 1));
+    const growth = (1 - Math.exp(-level / 18)) * 1.06;
+    const levelTail = Math.min(0.55, level * 0.012);
+    const powerAmp = 0.88 + (power - 1) * 0.42;
+    return 1 + (growth + levelTail) * powerAmp;
+  }
+
+  function petFeedCostForLevel(pet = getPetData(), levelOverride = null) {
+    const level = Math.max(1, Number(levelOverride || state.player.petLevel || 1));
+    const playerLevel = Math.max(1, Number(state.player.level || 1));
+    const power = Math.max(0.9, Number((pet && pet.power) || 1));
+    const costs = {
+      food: 1 + Math.floor((level - 1) / 30) + (power >= 2.2 && level >= 30 ? 1 : 0) + Math.floor(playerLevel / 80),
+      essence: 0,
+      sigils: 0,
+      catalysts: 0,
+      echoShards: 0,
+    };
+    if (level >= 28) {
+      costs.essence = 1 + Math.floor((level - 28) / 24) + (power >= 2.1 ? 1 : 0);
+    }
+    if (level >= 38) {
+      costs.sigils = Math.floor((level - 38) / 24) + (power >= 1.8 ? 1 : 0);
+    }
+    if (level >= 50 && power >= 2.1) {
+      costs.catalysts = 1 + Math.floor((level - 50) / 28);
+    }
+    if (level >= 66 && power >= 2.2) {
+      costs.echoShards = 1 + Math.floor((level - 66) / 34);
+    }
+    return costs;
+  }
+
+  function hasResourceCost(cost) {
+    return Object.entries(cost).every(([key, value]) => (state.player[key] || 0) >= (value || 0));
+  }
+
+  function spendResourceCost(cost) {
+    Object.entries(cost).forEach(([key, value]) => {
+      if (!value) return;
+      state.player[key] = Math.max(0, Number(state.player[key] || 0) - value);
+    });
+  }
+
+  function addResourceCost(cost) {
+    Object.entries(cost).forEach(([key, value]) => {
+      if (!value) return;
+      state.player[key] = Math.max(0, Number(state.player[key] || 0) + value);
+    });
+  }
+
+  function compactCost(cost) {
+    return Object.fromEntries(
+      Object.entries(cost || {}).filter(([, value]) => Number(value || 0) > 0)
+    );
+  }
+
+  function formatCost(cost) {
+    const labels = {
+      shards: 'fragmentos',
+      essence: 'esencia',
+      food: 'comida',
+      sigils: 'sigilos',
+      catalysts: 'catalizadores',
+      echoShards: 'eco-fragmentos',
+    };
+    const chunks = Object.entries(compactCost(cost)).map(([key, value]) => `${fmt(value)} ${labels[key] || key}`);
+    return chunks.length ? chunks.join(' · ') : 'sin coste';
+  }
+
+  function resolveRitual(ritualId = 'wild') {
+    return PET_RITUALS.find((entry) => entry.id === ritualId) || PET_RITUALS[0];
+  }
+
+  function ritualCost(ritualId = 'wild') {
+    const ritual = resolveRitual(ritualId);
+    const level = Math.max(1, Number(state.player.level || 1));
+    const ascension = Math.max(0, Number(state.player.ascension || 0));
+    const cost = {};
+    Object.keys(ritual.baseCost || {}).forEach((key) => {
+      const base = Number(ritual.baseCost[key] || 0);
+      const levelScale = Number((ritual.levelScaling && ritual.levelScaling[key]) || 0);
+      const ascScale = Number((ritual.ascensionScaling && ritual.ascensionScaling[key]) || 0);
+      cost[key] = Math.max(0, Math.round(base + level * levelScale + ascension * ascScale));
+    });
+    return compactCost(cost);
+  }
+
+  function availablePetsForPlayer() {
+    const level = Math.max(1, Number(state.player.level || 1));
+    const ascension = Math.max(0, Number(state.player.ascension || 0));
+    const unlockBudget = level + ascension * 2;
+    const unlocked = PETS.filter((pet) => Number(pet.unlockLevel || 1) <= unlockBudget);
+    return unlocked.length ? unlocked : PETS.slice(0, 4);
+  }
+
+  function tierWeightsWithPity(ritual) {
+    const pity = state.player.petPity || {};
+    const weights = clone((ritual && ritual.tierWeights) || {});
+    weights.rare = Math.max(0, Number(weights.rare || 0)) * (1 + Math.min(0.85, Number(pity.rare || 0) * 0.06));
+    weights.epic = Math.max(0, Number(weights.epic || 0)) * (1 + Math.min(2.2, Number(pity.epic || 0) * 0.12));
+    weights.mythic = Math.max(0, Number(weights.mythic || 0)) * (1 + Math.min(2.8, Number(pity.mythic || 0) * 0.14));
+
+    let guaranteedTier = null;
+    if ((pity.mythic || 0) >= 26) guaranteedTier = 'mythic';
+    else if ((pity.epic || 0) >= 14) guaranteedTier = 'epic';
+    else if ((pity.rare || 0) >= 8) guaranteedTier = 'rare';
+
+    return { weights, guaranteedTier };
+  }
+
+  function rollTier(weights, guaranteedTier = null) {
+    const entries = Object.entries(weights || {})
+      .filter(([, weight]) => Number(weight || 0) > 0)
+      .map(([tier, weight]) => ({ value: tier, weight: Number(weight) }));
+    if (!entries.length) return 'common';
+    if (guaranteedTier) {
+      const minRank = petTierRank(guaranteedTier);
+      const filtered = entries.filter((entry) => petTierRank(entry.value) >= minRank);
+      if (filtered.length) {
+        const filteredTotal = filtered.reduce((acc, entry) => acc + entry.weight, 0);
+        let filteredCursor = Math.random() * filteredTotal;
+        for (let i = 0; i < filtered.length; i += 1) {
+          filteredCursor -= filtered[i].weight;
+          if (filteredCursor <= 0) return filtered[i].value;
+        }
+        return filtered[filtered.length - 1].value;
+      }
+    }
+    const total = entries.reduce((acc, entry) => acc + entry.weight, 0);
+    let cursor = Math.random() * total;
+    for (let i = 0; i < entries.length; i += 1) {
+      cursor -= entries[i].weight;
+      if (cursor <= 0) return entries[i].value;
+    }
+    return entries[entries.length - 1].value;
+  }
+
+  function pickPetByRitual(ritualId = 'wild') {
+    const ritual = resolveRitual(ritualId);
+    const pool = availablePetsForPlayer();
+    const { weights, guaranteedTier } = tierWeightsWithPity(ritual);
+    const selectedTier = rollTier(weights, guaranteedTier);
+    const tierPool = pool.filter((pet) => (pet.tier || 'common') === selectedTier);
+    if (tierPool.length) return pick(tierPool);
+    const fallbackPool = pool
+      .filter((pet) => petTierRank(pet.tier || 'common') <= petTierRank(selectedTier))
+      .sort((a, b) => petTierRank(b.tier || 'common') - petTierRank(a.tier || 'common'));
+    return fallbackPool[0] || pick(pool);
+  }
+
+  function ensurePetPityState() {
+    if (!state.player.petPity || typeof state.player.petPity !== 'object') {
+      state.player.petPity = { rare: 0, epic: 0, mythic: 0, total: 0 };
+    }
+    state.player.petPity.rare = Math.max(0, Number(state.player.petPity.rare || 0));
+    state.player.petPity.epic = Math.max(0, Number(state.player.petPity.epic || 0));
+    state.player.petPity.mythic = Math.max(0, Number(state.player.petPity.mythic || 0));
+    state.player.petPity.total = Math.max(0, Number(state.player.petPity.total || 0));
+    return state.player.petPity;
+  }
+
+  function updatePetPityAfterHatch(pet) {
+    const pity = ensurePetPityState();
+    const tier = pet && pet.tier ? pet.tier : 'common';
+    pity.total += 1;
+    pity.rare = petTierRank(tier) >= petTierRank('rare') ? 0 : pity.rare + 1;
+    pity.epic = petTierRank(tier) >= petTierRank('epic') ? 0 : pity.epic + 1;
+    pity.mythic = tier === 'mythic' ? 0 : pity.mythic + 1;
+  }
+
+  function petProgressMeta() {
+    const pet = getPetData();
+    if (!pet || !state.player.pet) return null;
+    return {
+      pet,
+      level: Math.max(1, Number(state.player.petLevel || 1)),
+      xp: Math.max(0, Number(state.player.petXp || 0)),
+      xpNeeded: petXpForNextLevel(pet),
+      growthMultiplier: softRound(petGrowthMultiplier(pet), 3),
+    };
+  }
+
+  function previewPetFeed(times = 1) {
+    const pet = getPetData();
+    if (!pet || !state.player.pet) return { canFeed: false, reason: 'No tienes mascota activa.' };
+    const intended = Math.max(1, Math.min(50, Number(times || 1)));
+    let tempLevel = Math.max(1, Number(state.player.petLevel || 1));
+    let tempXp = Math.max(0, Number(state.player.petXp || 0));
+    const wallet = {
+      food: Number(state.player.food || 0),
+      essence: Number(state.player.essence || 0),
+      sigils: Number(state.player.sigils || 0),
+      catalysts: Number(state.player.catalysts || 0),
+      echoShards: Number(state.player.echoShards || 0),
+    };
+    const totalCost = { food: 0, essence: 0, sigils: 0, catalysts: 0, echoShards: 0 };
+    let applied = 0;
+    let gainedLevels = 0;
+    while (applied < intended) {
+      const cost = petFeedCostForLevel(pet, tempLevel);
+      const affordable = Object.entries(cost).every(([key, value]) => (wallet[key] || 0) >= (value || 0));
+      if (!affordable) break;
+      Object.entries(cost).forEach(([key, value]) => {
+        wallet[key] -= value || 0;
+        totalCost[key] += value || 0;
+      });
+      tempXp += 1;
+      const nextLevelXp = petXpForNextLevel(pet, tempLevel);
+      if (tempXp >= nextLevelXp) {
+        tempXp = 0;
+        tempLevel += 1;
+        gainedLevels += 1;
+      }
+      applied += 1;
+    }
+    const currentLevelXpNeed = petXpForNextLevel(pet, tempLevel);
+    return {
+      canFeed: applied > 0,
+      requested: intended,
+      applied,
+      gainedLevels,
+      totalCost: compactCost(totalCost),
+      next: {
+        level: tempLevel,
+        xp: tempXp,
+        xpNeeded: currentLevelXpNeed,
+      },
+      costPerFeed: compactCost(petFeedCostForLevel(pet)),
+    };
+  }
+
+  function previewPetHatch(ritualId = 'wild') {
+    const ritual = resolveRitual(ritualId);
+    const cost = ritualCost(ritual.id);
+    const pity = ensurePetPityState();
+    const { weights, guaranteedTier } = tierWeightsWithPity(ritual);
+    const totalWeight = Object.values(weights).reduce((acc, value) => acc + Number(value || 0), 0) || 1;
+    const chanceByTier = Object.fromEntries(
+      Object.entries(weights).map(([tier, value]) => [tier, softRound((Number(value || 0) / totalWeight) * 100, 1)])
+    );
+    return {
+      ritual,
+      cost,
+      canAfford: hasResourceCost(cost),
+      pity: clone(pity),
+      guaranteedTier,
+      chanceByTier,
+    };
+  }
+
+  function petRituals() {
+    return PET_RITUALS.map((ritual) => previewPetHatch(ritual.id));
+  }
+
+  function hatchPet(ritualId = 'wild') {
     const beforeGold = state.player.gold || 0;
     const beforeMaterials = telemetryMaterialSum(state.player);
     if (state.player.pet) {
-      toast('Ya tienes una mascota activa', 'cyan');
+      toast('Ya tienes una mascota activa. Libera o fortalece la actual antes de incubar otra.', 'cyan');
       return;
     }
-    if (state.player.shards < 5 || state.player.essence < 8) {
-      toast('Necesitas 5 fragmentos y 8 de esencia', 'danger');
+    const ritual = resolveRitual(ritualId);
+    if (state.player.level < (ritual.unlockLevel || 1)) {
+      toast(`Este ritual exige nivel ${ritual.unlockLevel}.`, 'danger');
       return;
     }
-    state.player.shards -= 5;
-    state.player.essence -= 8;
-    const pet = pick(PETS);
+    const cost = ritualCost(ritual.id);
+    if (!hasResourceCost(cost)) {
+      toast(`No tienes recursos suficientes. Necesitas ${formatCost(cost)}.`, 'danger');
+      return;
+    }
+    spendResourceCost(cost);
+    const pet = pickPetByRitual(ritual.id);
     state.player.pet = pet.id;
     state.player.petLevel = 1;
     state.player.petXp = 0;
-    addJournal('🐾', `Incubas a <b>${pet.name}</b>. ${pet.desc}`);
+    updatePetPityAfterHatch(pet);
+    addJournal('🐾', `Invocas a <b>${pet.name}</b> (${petTierLabel(pet.tier)}). Ritual: ${ritual.name}. ${pet.desc}`);
     recordEconomyDelta((state.player.gold || 0) - beforeGold, telemetryMaterialSum(state.player) - beforeMaterials);
-    toast(`Mascota obtenida: ${pet.name}`, 'violet');
+    toast(`Mascota obtenida: ${pet.name} · ${petTierLabel(pet.tier)}`, pet.tier === 'mythic' ? 'gold' : pet.tier === 'epic' ? 'violet' : 'success');
   }
 
-  function feedPet() {
+  function feedPet(times = 1) {
     const beforeGold = state.player.gold || 0;
     const beforeMaterials = telemetryMaterialSum(state.player);
     if (!state.player.pet) {
-      toast('Aún no tienes mascota', 'danger');
+      toast('Aun no tienes mascota activa.', 'danger');
       return;
     }
-    if (state.player.food < 2 || state.player.essence < 1) {
-      toast('Necesitas 2 de comida y 1 de esencia', 'danger');
+    const pet = getPetData();
+    const requested = Math.max(1, Math.min(50, Number(times || 1)));
+    let applied = 0;
+    let levelsGained = 0;
+    while (applied < requested) {
+      const cost = petFeedCostForLevel(pet);
+      if (!hasResourceCost(cost)) break;
+      spendResourceCost(cost);
+      state.player.petXp += 1;
+      const needed = petXpForNextLevel(pet, state.player.petLevel);
+      if (state.player.petXp >= needed) {
+        state.player.petXp = 0;
+        state.player.petLevel += 1;
+        levelsGained += 1;
+      }
+      applied += 1;
+    }
+    if (!applied) {
+      const sampleCost = petFeedCostForLevel(pet);
+      toast(`No tienes recursos para alimentar. Requiere ${formatCost(sampleCost)}.`, 'danger');
       return;
     }
-    state.player.food -= 2;
-    state.player.essence -= 1;
-    state.player.petXp += 1;
-    if (state.player.petXp >= 3 + state.player.petLevel) {
-      state.player.petXp = 0;
-      state.player.petLevel += 1;
-      addJournal('🐾', `Tu mascota alcanza nivel ${state.player.petLevel}.`);
-      toast(`Mascota nivel ${state.player.petLevel}`, 'success');
+    if (levelsGained > 0) {
+      addJournal('🐾', `${pet.name} gana ${levelsGained} nivel(es) y alcanza nivel ${state.player.petLevel}.`);
+      toast(`${pet.name} sube a nivel ${state.player.petLevel}`, 'success');
+    } else if (requested > 1) {
+      toast(`Alimentas ${applied} vez/veces a ${pet.name}.`, 'cyan');
     }
     recordEconomyDelta((state.player.gold || 0) - beforeGold, telemetryMaterialSum(state.player) - beforeMaterials);
   }
@@ -1592,10 +1905,22 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   function releasePet() {
     if (!state.player.pet) return;
     const pet = getPetData();
+    const level = Math.max(1, Number(state.player.petLevel || 1));
+    const tier = pet && pet.tier ? pet.tier : 'common';
+    const power = Math.max(0.9, Number((pet && pet.power) || 1));
+    const refund = {
+      food: Math.max(0, Math.floor((level - 1) * 0.35)),
+      essence: Math.max(0, Math.floor((level - 1) * 0.46 * power)),
+      shards: Math.max(0, Math.floor((level - 6) / 10)) + (tier === 'mythic' ? 3 : tier === 'epic' ? 2 : tier === 'rare' ? 1 : 0),
+      sigils: level >= 20 && petTierRank(tier) >= petTierRank('epic') ? Math.floor(level / 18) : 0,
+      catalysts: level >= 34 && tier === 'mythic' ? 1 : 0,
+    };
+    addResourceCost(refund);
     state.player.pet = null;
     state.player.petLevel = 0;
     state.player.petXp = 0;
-    addJournal('🪽', `Liberas a ${pet ? pet.name : 'tu mascota'} y recuperas tu calma.`);
+    addJournal('🪽', `Liberas a ${pet ? pet.name : 'tu mascota'} y recuperas ${formatCost(refund)}.`);
+    toast('Mascota liberada', 'cyan');
   }
 
   function spendRelic(point) {
@@ -1789,6 +2114,12 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     fightArena,
     arenaBlitz,
     runDungeon,
+    petProgressMeta,
+    previewPetFeed,
+    previewPetHatch,
+    petRituals,
+    petXpForNextLevel,
+    petGrowthMultiplier,
     hatchPet,
     feedPet,
     releasePet,

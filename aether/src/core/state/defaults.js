@@ -41,7 +41,7 @@ export function createDefaultsModule(deps) {
   function makeDefaultState() {
     const startedAt = Date.now();
     return {
-      version: 7,
+      version: 8,
       currentView: 'resumen',
       currentTab: 'resumen',
       featureFlags: {
@@ -92,6 +92,12 @@ export function createDefaultsModule(deps) {
         pet: null,
         petLevel: 0,
         petXp: 0,
+        petPity: {
+          rare: 0,
+          epic: 0,
+          mythic: 0,
+          total: 0,
+        },
         activeSkills: ['powerStrike', 'quickLunge', 'fortify'],
         unlockedSkills: ['powerStrike', 'quickLunge', 'fortify'],
         skillLevels: {

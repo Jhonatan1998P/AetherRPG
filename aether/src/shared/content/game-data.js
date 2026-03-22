@@ -973,12 +973,54 @@ export const JOBS = [
   { id: 'arena', name: 'Espectaculo Menor', duration: 210, reward: { gold: 390, xp: 58, essence: 1, potions: 1 }, desc: 'Ruta larga de oro: menos explosiva, mas util para progreso por etapas.' },
 ];
 
+export const PET_RITUALS = [
+  {
+    id: 'wild',
+    name: 'Incubacion silvestre',
+    desc: 'Bajo coste y alta variedad. Ideal para early y rotaciones frecuentes.',
+    unlockLevel: 1,
+    tierWeights: { common: 76, rare: 21, epic: 3, mythic: 0 },
+    baseCost: { shards: 2, essence: 4, food: 1, sigils: 0, catalysts: 0, echoShards: 0 },
+    levelScaling: { shards: 0.05, essence: 0.08, food: 0.02, sigils: 0, catalysts: 0, echoShards: 0 },
+    ascensionScaling: { shards: 0.3, essence: 0.5, food: 0.1, sigils: 0, catalysts: 0, echoShards: 0 },
+  },
+  {
+    id: 'bonded',
+    name: 'Incubacion vinculada',
+    desc: 'Mejora la tasa de raras y epicas usando insumos de fase media.',
+    unlockLevel: 12,
+    tierWeights: { common: 34, rare: 46, epic: 17, mythic: 3 },
+    baseCost: { shards: 7, essence: 11, food: 2, sigils: 1, catalysts: 0, echoShards: 0 },
+    levelScaling: { shards: 0.11, essence: 0.15, food: 0.04, sigils: 0.04, catalysts: 0.01, echoShards: 0 },
+    ascensionScaling: { shards: 0.8, essence: 1.2, food: 0.2, sigils: 0.35, catalysts: 0.1, echoShards: 0 },
+  },
+  {
+    id: 'astral',
+    name: 'Convergencia astral',
+    desc: 'Ritual de alto riesgo y alto coste para perseguir companeros de techo tardio.',
+    unlockLevel: 24,
+    tierWeights: { common: 10, rare: 34, epic: 41, mythic: 15 },
+    baseCost: { shards: 15, essence: 18, food: 3, sigils: 3, catalysts: 1, echoShards: 0 },
+    levelScaling: { shards: 0.18, essence: 0.24, food: 0.06, sigils: 0.08, catalysts: 0.03, echoShards: 0.012 },
+    ascensionScaling: { shards: 1.1, essence: 1.8, food: 0.35, sigils: 0.6, catalysts: 0.2, echoShards: 0.12 },
+  },
+];
+
 export const PETS = [
-  { id: 'wolf', name: 'Lobo de Guerra', icon: 'paw', desc: 'Aumenta el dano y el critico.', bonus: { attackPct: 0.08, crit: 0.03 } },
-  { id: 'phoenix', name: 'Fenix de Ceniza', icon: 'flame', desc: 'Mas vida, regeneracion y esencia.', bonus: { hpPct: 0.1, regenPct: 0.15 } },
-  { id: 'golem', name: 'Golem de Basalto', icon: 'shield', desc: 'Defensa bruta y bloqueo.', bonus: { defensePct: 0.1, block: 0.03 } },
-  { id: 'panther', name: 'Pantera Crepuscular', icon: 'spark', desc: 'Velocidad, esquiva y golpes finos.', bonus: { speedPct: 0.08, dodge: 0.03 } },
-  { id: 'raven', name: 'Cuervo del Oraculo', icon: 'feather', desc: 'Mas oro, mejor botin y vision.', bonus: { goldPct: 0.08, lootLuck: 0.06 } },
+  { id: 'wolf', name: 'Lobo de Guerra', icon: 'paw', tier: 'common', power: 1.08, unlockLevel: 1, desc: 'Presion ofensiva estable para arranque y farmeo activo.', bonus: { attackPct: 0.042, crit: 0.012 } },
+  { id: 'golem', name: 'Golem de Basalto', icon: 'shield', tier: 'common', power: 1.12, unlockLevel: 1, desc: 'Mitigacion simple y consistente contra rutas de desgaste.', bonus: { defensePct: 0.052, block: 0.012 } },
+  { id: 'panther', name: 'Pantera Crepuscular', icon: 'spark', tier: 'common', power: 1.1, unlockLevel: 1, desc: 'Movilidad tactica para evitar dano y sostener ritmo.', bonus: { speedPct: 0.05, dodge: 0.012 } },
+  { id: 'raven', name: 'Cuervo del Oraculo', icon: 'feather', tier: 'common', power: 1.09, unlockLevel: 1, desc: 'Mejora economica gradual para sesiones largas.', bonus: { goldPct: 0.05, lootLuck: 0.028 } },
+  { id: 'boar', name: 'Jabali de Guerra', icon: 'shield', tier: 'common', power: 1.11, unlockLevel: 4, desc: 'Sustain robusto para peleas largas de midgame temprano.', bonus: { hpPct: 0.06, regenPct: 0.055 } },
+  { id: 'ibis', name: 'Ibis de Hierro', icon: 'feather', tier: 'common', power: 1.06, unlockLevel: 6, desc: 'Companero flexible para builds mixtas.', bonus: { attackPct: 0.028, lifesteal: 0.008 } },
+  { id: 'phoenix', name: 'Fenix de Ceniza', icon: 'flame', tier: 'rare', power: 1.36, unlockLevel: 10, desc: 'Escala bien con rutas de supervivencia y regeneracion.', bonus: { hpPct: 0.078, regenPct: 0.105 } },
+  { id: 'lynx', name: 'Lince del Velo', icon: 'bolt', tier: 'rare', power: 1.33, unlockLevel: 12, desc: 'Acelera ejecucion de encuentros con tempo alto.', bonus: { attackPct: 0.06, speedPct: 0.04 } },
+  { id: 'turtle', name: 'Tortuga de Obsidiana', icon: 'shield', tier: 'rare', power: 1.38, unlockLevel: 14, desc: 'Defensa pesada para bosses y retos de amenaza alta.', bonus: { defensePct: 0.082, hpPct: 0.065 } },
+  { id: 'viper', name: 'Vipera Carmesi', icon: 'bolt', tier: 'rare', power: 1.35, unlockLevel: 16, desc: 'Builds de critico sostenido con retorno de vida.', bonus: { crit: 0.018, lifesteal: 0.014 } },
+  { id: 'gryphon', name: 'Grifo Solar', icon: 'spark', tier: 'epic', power: 1.84, unlockLevel: 22, desc: 'Companero ofensivo de alto techo para runs exigentes.', bonus: { attackPct: 0.082, crit: 0.02, speedPct: 0.048 } },
+  { id: 'leviathan', name: 'Leviatan de Marea', icon: 'shield', tier: 'epic', power: 1.88, unlockLevel: 24, desc: 'Control defensivo premium para mazmorra y bosses.', bonus: { defensePct: 0.1, block: 0.02, regenPct: 0.08 } },
+  { id: 'oracledrake', name: 'Draco del Oraculo', icon: 'feather', tier: 'mythic', power: 2.25, unlockLevel: 30, desc: 'Especialista en economia tardia y caceria de botin raro.', bonus: { goldPct: 0.098, lootLuck: 0.07, attackPct: 0.048 } },
+  { id: 'voidstag', name: 'Ciervo del Vacio', icon: 'feather', tier: 'mythic', power: 2.18, unlockLevel: 32, desc: 'Movilidad extrema con supervivencia avanzada en late game.', bonus: { speedPct: 0.082, dodge: 0.024, lifesteal: 0.018 } },
 ];
 
 export const SKILLS = {

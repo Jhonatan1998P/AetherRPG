@@ -4,6 +4,7 @@ export function createSecondaryViews(deps) {
     SLOT_NAMES,
     ZONES,
     JOBS,
+    PET_RITUALS,
     PETS,
     SKILLS,
     ACHIEVEMENTS,
@@ -12,6 +13,7 @@ export function createSecondaryViews(deps) {
     guildTotal,
     achievementProgress,
     fmt,
+    pct,
     htmlStat,
     progressBar,
     icon,
@@ -32,6 +34,12 @@ export function createSecondaryViews(deps) {
     previewTranscendItem,
     previewStabilizeItem,
     resourceOffer,
+    petProgressMeta,
+    previewPetFeed,
+    previewPetHatch,
+    petRituals,
+    petXpForNextLevel,
+    petGrowthMultiplier,
     getPityStatus,
     getForgePityStatus,
     getForgeState,
@@ -45,6 +53,7 @@ export function createSecondaryViews(deps) {
     actionButton,
     actionBar,
     statusChip,
+    statLabel,
   } = deps;
 
   function renderExpedicion() {
@@ -606,47 +615,155 @@ export function createSecondaryViews(deps) {
 
   function renderMascota() {
     const pet = getPetData();
+    const progress = petProgressMeta ? petProgressMeta() : null;
+    const feedPreview = pet ? previewPetFeed(1) : null;
+    const feedPreviewBulk = pet ? previewPetFeed(5) : null;
+    const ritualCards = petRituals ? petRituals() : PET_RITUALS.map((ritual) => previewPetHatch(ritual.id));
+    const tierClass = {
+      common: 'surface-subtle',
+      rare: 'ring ring-cyan-300/25 bg-cyan-400/10',
+      epic: 'ring ring-violet-300/30 bg-violet-400/10',
+      mythic: 'ring ring-amber-300/35 bg-amber-400/10',
+    };
+    const tierLabel = {
+      common: 'Comun',
+      rare: 'Rara',
+      epic: 'Epica',
+      mythic: 'Mitica',
+    };
+    const resourceLabel = {
+      shards: 'fragmentos',
+      essence: 'esencia',
+      food: 'comida',
+      sigils: 'sigilos',
+      catalysts: 'catalizadores',
+      echoShards: 'eco-fragmentos',
+    };
+    const formatCost = (cost) => Object.entries(cost || {})
+      .filter(([, value]) => Number(value || 0) > 0)
+      .map(([key, value]) => `${value} ${resourceLabel[key] || key}`)
+      .join(' · ');
+    const bonusLabel = (key, value) => {
+      const isPct = ['crit', 'dodge', 'block', 'lifesteal', 'attackPct', 'defensePct', 'hpPct', 'speedPct', 'goldPct', 'lootLuck', 'regenPct'].includes(key);
+      const sign = value >= 0 ? '+' : '';
+      return `${statLabel ? statLabel(key) : key}: <b>${sign}${isPct ? pct(value) : fmt(value)}</b>`;
+    };
+
     return `
       <div class="space-y-5">
-        ${pageLead('mascota', pet ? `Activa: <b>${pet.name}</b>` : 'Aún no tienes mascota', [
+        ${pageLead('mascota', pet ? `Activa: <b>${pet.name}</b> · Tier <b>${tierLabel[pet.tier || 'common']}</b>` : 'Sin mascota activa', [
           actionButton('👤 Perfil', '', "game.setView('perfil')"),
-          actionButton('🥚 Incubar', 'btn-violet', 'game.hatchPet()', 'Consume recursos para obtener una mascota aleatoria.')
+          actionButton('🥚 Silvestre', 'btn-primary', "game.hatchPet('wild')", 'Ritual barato para obtener una mascota de entrada.'),
+          actionButton('🌌 Astral', 'btn-violet', "game.hatchPet('astral')", 'Ritual tardio con mayor probabilidad de tiers altos.')
         ].join(''))}
 
-        <div class="grid xl:grid-cols-[1fr,320px] gap-5">
+        <div class="grid xl:grid-cols-[1.1fr,.9fr] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Contexto', 'Mascota activa', 'Gestiona alimentación y progreso solo del compañero que llevas activo.')}
-            ${pet ? `
+            ${sectionHeader('Companero activo', 'Progreso y curva', 'La curva de experiencia y costes escalan con tier de mascota, nivel de mascota y nivel de jugador.')}
+            ${pet && progress ? `
               <div class="glass rounded-2xl p-5">
-                <div class="text-cyan-200">${icon(pet.icon || 'paw', 'h-9 w-9')}</div>
-                <div class="font-display font-extrabold text-2xl mt-2">${pet.name}</div>
-                <div class="text-sm text-slate-300/75 mt-1">${pet.desc}</div>
-                <div class="grid grid-cols-2 gap-3 mt-4">
-                  ${htmlStat('Nivel', state.player.petLevel)}
-                  ${htmlStat('XP', `${state.player.petXp}/${3 + state.player.petLevel}`)}
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <div class="text-cyan-200">${icon(pet.icon || 'paw', 'h-9 w-9')}</div>
+                    <div class="font-display font-extrabold text-2xl mt-2">${pet.name}</div>
+                    <div class="text-xs uppercase tracking-[.18em] text-slate-300/58 mt-1">${tierLabel[pet.tier || 'common']} · Poder ${fmt(pet.power || 1)}</div>
+                  </div>
+                  ${statusChip(`x${fmt(progress.growthMultiplier)}`, pet.tier === 'mythic' ? 'warning' : pet.tier === 'epic' ? 'violet' : 'success')}
                 </div>
-                <div class="grid sm:grid-cols-2 gap-3 mt-4">
-                  <button type="button" class="btn btn-success" onclick="game.feedPet()">${icon('box', 'h-4 w-4')}<span>Alimentar</span></button>
-                  <button type="button" class="btn btn-danger" onclick="game.releasePet()" ${tooltipAttr('Libera la mascota activa de forma permanente. Perderás sus bonos y progreso acumulado del compañero actual.')}>Liberar</button>
+                <div class="text-sm text-slate-300/75 mt-2">${pet.desc}</div>
+
+                <div class="grid sm:grid-cols-3 gap-3 mt-4">
+                  ${htmlStat('Nivel', progress.level)}
+                  ${htmlStat('XP', `${progress.xp}/${progress.xpNeeded}`)}
+                  ${htmlStat('Escalado', `x${fmt(progress.growthMultiplier)}`, 'Multiplicador aplicado a bonus base')}
+                </div>
+
+                <div class="mt-3">
+                  ${progressBar(progress.xp, progress.xpNeeded, 'bg-gradient-to-r from-cyan-400 via-emerald-300 to-sky-300 shadow-[0_0_14px_rgba(56,189,248,.28)]', 'Progreso de nivel', 'Sube alimentando. Coste y curva escalan con el poder del companero.')}
+                </div>
+
+                <div class="grid sm:grid-cols-3 gap-3 mt-4">
+                  <button type="button" class="btn btn-success" onclick="game.feedPet()" ${feedPreview && feedPreview.canFeed ? tooltipAttr(`Consume ${formatCost(feedPreview.costPerFeed)} para +1 XP.`) : 'disabled'}>${icon('box', 'h-4 w-4')}<span>Alimentar x1</span></button>
+                  <button type="button" class="btn btn-primary" onclick="game.feedPet(5)" ${feedPreviewBulk && feedPreviewBulk.canFeed ? tooltipAttr(`Intenta 5 alimentaciones. Coste estimado: ${formatCost(feedPreviewBulk.totalCost)}.`) : 'disabled'}>${icon('spark', 'h-4 w-4')}<span>Alimentar x5</span></button>
+                  <button type="button" class="btn btn-danger" onclick="game.releasePet()" ${tooltipAttr('Libera la mascota activa. Recuperas una fraccion de recursos segun nivel y tier.')}>Liberar</button>
+                </div>
+
+                <div class="grid sm:grid-cols-2 gap-3 mt-4 text-sm">
+                  <div class="rounded-2xl bg-white/[.04] p-3">
+                    <div class="text-xs uppercase tracking-[.18em] text-slate-300/55">Coste actual por comida</div>
+                    <div class="mt-1">${feedPreview ? formatCost(feedPreview.costPerFeed) : 'No disponible'}</div>
+                  </div>
+                  <div class="rounded-2xl bg-white/[.04] p-3">
+                    <div class="text-xs uppercase tracking-[.18em] text-slate-300/55">Meta del siguiente nivel</div>
+                    <div class="mt-1">${petXpForNextLevel ? `${petXpForNextLevel(pet, progress.level)} XP` : `${progress.xpNeeded} XP`}</div>
+                  </div>
                 </div>
               </div>
             ` : `
               <div class="glass rounded-2xl p-5">
-                <p class="text-sm text-slate-300/75">Incuba un huevo con 5 fragmentos y 8 de esencia para recibir un compañero aleatorio.</p>
-                <button type="button" class="btn btn-violet mt-4" onclick="game.hatchPet()">${icon('spark', 'h-4 w-4')}<span>Incubar huevo</span></button>
+                <p class="text-sm text-slate-300/75">No hay mascota activa. Usa la incubadora de la derecha y elige un ritual acorde a tu etapa de progreso.</p>
+                <div class="grid sm:grid-cols-2 gap-3 mt-4">
+                  <button type="button" class="btn btn-primary" onclick="game.hatchPet('wild')">${icon('spark', 'h-4 w-4')}<span>Ritual silvestre</span></button>
+                  <button type="button" class="btn btn-violet" onclick="game.hatchPet('bonded')">${icon('flame', 'h-4 w-4')}<span>Ritual vinculado</span></button>
+                </div>
               </div>
             `}
           </section>
 
-          <aside class="glass rounded-3xl p-5">
-            ${sectionHeader('Soporte', 'Catálogo rápido')}
-            <div class="grid gap-3">
-              ${PETS.map((entry) => `
-                <div class="glass rounded-2xl p-4">
-                  <div class="font-bold font-display inline-flex items-center gap-2">${icon(entry.icon || 'paw', 'h-4 w-4')}<span>${entry.name}</span></div>
-                  <div class="text-sm text-slate-300/75 mt-1">${entry.desc}</div>
-                </div>
-              `).join('')}
+          <aside class="stack-compact">
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Incubadora', 'Rituales y costes', 'Cada ritual cambia probabilidades por tier y coste total. Pity de tiers altos incluido.')}
+              <div class="grid gap-3">
+                ${ritualCards.map((ritualData) => {
+                  const ritual = ritualData.ritual;
+                  const chance = ritualData.chanceByTier || {};
+                  const unlock = state.player.level >= (ritual.unlockLevel || 1);
+                  return `
+                    <div class="rounded-2xl p-4 ${tierClass[ritual.id === 'astral' ? 'epic' : ritual.id === 'bonded' ? 'rare' : 'common']}">
+                      <div class="flex items-start justify-between gap-2">
+                        <div>
+                          <div class="font-display font-extrabold">${ritual.name}</div>
+                          <div class="text-xs text-slate-300/62 mt-1">Nivel ${ritual.unlockLevel}+ · ${ritual.desc}</div>
+                        </div>
+                        ${statusChip(unlock ? 'Listo' : `Nv ${ritual.unlockLevel}`, unlock ? 'success' : 'danger')}
+                      </div>
+                      <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
+                        <div class="rounded-xl bg-white/[.04] p-2">Comun <b>${chance.common || 0}%</b></div>
+                        <div class="rounded-xl bg-white/[.04] p-2">Rara <b>${chance.rare || 0}%</b></div>
+                        <div class="rounded-xl bg-white/[.04] p-2">Epica <b>${chance.epic || 0}%</b></div>
+                        <div class="rounded-xl bg-white/[.04] p-2">Mitica <b>${chance.mythic || 0}%</b></div>
+                      </div>
+                      <div class="text-xs text-slate-300/68 mt-3">Coste: ${formatCost(ritualData.cost)}</div>
+                      <button type="button" class="btn mt-3 w-full ${ritual.id === 'astral' ? 'btn-violet' : ritual.id === 'bonded' ? 'btn-primary' : ''}" onclick="game.hatchPet('${ritual.id}')" ${unlock && !pet ? '' : 'disabled'}>
+                        ${pet ? 'Libera mascota actual' : `Invocar (${ritual.id})`}
+                      </button>
+                      ${ritualData.guaranteedTier ? `<div class="text-[11px] text-amber-200 mt-2">Garantia activa: ${tierLabel[ritualData.guaranteedTier] || ritualData.guaranteedTier}+</div>` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Catalogo', 'Diversidad de mascotas')}
+              <div class="grid gap-3 max-h-[24rem] overflow-auto pr-1">
+                ${PETS.map((entry) => {
+                  const isUnlocked = state.player.level >= Number(entry.unlockLevel || 1);
+                  return `
+                    <div class="rounded-2xl p-4 ${tierClass[entry.tier || 'common']} ${isUnlocked ? '' : 'opacity-70'}">
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="font-bold font-display inline-flex items-center gap-2">${icon(entry.icon || 'paw', 'h-4 w-4')}<span>${entry.name}</span></div>
+                        <span class="text-xs uppercase tracking-[.16em] text-slate-300/60">${tierLabel[entry.tier || 'common']}</span>
+                      </div>
+                      <div class="text-xs text-slate-300/62 mt-1">Nivel ${entry.unlockLevel || 1}+ · Poder ${fmt(entry.power || 1)}</div>
+                      <div class="text-sm text-slate-300/75 mt-2">${entry.desc}</div>
+                      <div class="grid grid-cols-1 gap-1 mt-3 text-xs">
+                        ${Object.entries(entry.bonus || {}).map(([key, value]) => `<div class="rounded-lg bg-white/[.05] px-2 py-1">${bonusLabel(key, value)}</div>`).join('')}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
             </div>
           </aside>
         </div>
