@@ -56,6 +56,42 @@ export function createSecondaryViews(deps) {
     statLabel,
   } = deps;
 
+  const RESOURCE_META = {
+    gold: { label: 'Oro', tone: 'text-amber-100 border-amber-300/30 bg-amber-400/12' },
+    iron: { label: 'Hierro', tone: 'text-slate-100 border-slate-300/25 bg-slate-400/10' },
+    wood: { label: 'Madera', tone: 'text-lime-100 border-lime-300/25 bg-lime-400/10' },
+    essence: { label: 'Esencia', tone: 'text-cyan-100 border-cyan-300/25 bg-cyan-400/10' },
+    sigils: { label: 'Sigilos', tone: 'text-violet-100 border-violet-300/25 bg-violet-400/10' },
+    catalysts: { label: 'Catalizadores', tone: 'text-fuchsia-100 border-fuchsia-300/25 bg-fuchsia-400/10' },
+    echoShards: { label: 'Fragmentos de Eco', tone: 'text-rose-100 border-rose-300/25 bg-rose-400/10' },
+    keys: { label: 'Llaves', tone: 'text-sky-100 border-sky-300/25 bg-sky-400/10' },
+    potions: { label: 'Pociones', tone: 'text-emerald-100 border-emerald-300/25 bg-emerald-400/10' },
+    shards: { label: 'Fragmentos', tone: 'text-cyan-100 border-cyan-300/25 bg-cyan-400/10' },
+    food: { label: 'Comida', tone: 'text-orange-100 border-orange-300/25 bg-orange-400/10' },
+  };
+
+  function resourceLabel(key) {
+    return (RESOURCE_META[key] && RESOURCE_META[key].label) || key;
+  }
+
+  function formatCost(cost = {}) {
+    return Object.entries(cost)
+      .filter(([, value]) => Number(value || 0) > 0)
+      .map(([key, value]) => `${fmt(value)} ${resourceLabel(key)}`)
+      .join(' · ');
+  }
+
+  function formatCostChips(cost = {}) {
+    const chips = Object.entries(cost)
+      .filter(([, value]) => Number(value || 0) > 0)
+      .map(([key, value]) => {
+        const meta = RESOURCE_META[key] || { label: key, tone: 'text-slate-100 border-white/15 bg-white/[0.08]' };
+        return `<span class="inline-flex items-center rounded-full border px-2 py-1 text-[11px] font-semibold ${meta.tone}">${fmt(value)} ${meta.label}</span>`;
+      });
+    if (!chips.length) return '<span class="text-slate-300/62">Sin coste</span>';
+    return `<span class="inline-flex flex-wrap gap-1.5 align-middle">${chips.join('')}</span>`;
+  }
+
   function renderExpedicion() {
     const isRunning = Boolean(state.timers.expedition);
     return `
@@ -192,12 +228,12 @@ export function createSecondaryViews(deps) {
       .map((kind) => resourceOffer(kind))
       .filter(Boolean);
     const supportMeta = {
-      potion: { icon: '🧪', tone: 'btn-success', desc: 'Recuperación directa para mantenerte combatiendo sin pausas largas.' },
-      key: { icon: '🗝️', tone: 'btn-violet', desc: 'Permite entrar a mazmorras y empujar progresión de pisos.' },
-      essence: { icon: '✨', tone: 'btn-primary', desc: 'Material base para forja, mejoras y conversiones.' },
-      catalyst: { icon: '🧿', tone: '', desc: 'Componente avanzado para acciones de forja profunda y trascendencia.' },
-      sigil: { icon: '🔷', tone: '', desc: 'Recurso especializado para mejoras de mayor impacto.' },
-      food: { icon: '🍖', tone: '', desc: 'Apoyo de ciclo para trabajo, mascota y estabilidad de recursos.' },
+      potion: { iconName: 'flask', tone: 'btn-success', desc: 'Recuperación directa para mantenerte combatiendo sin pausas largas.' },
+      key: { iconName: 'key', tone: 'btn-violet', desc: 'Permite entrar a mazmorras y empujar progresión de pisos.' },
+      essence: { iconName: 'spark', tone: 'btn-primary', desc: 'Material base para forja, mejoras y conversiones.' },
+      catalyst: { iconName: 'gem', tone: '', desc: 'Componente avanzado para acciones de forja profunda y trascendencia.' },
+      sigil: { iconName: 'pin', tone: '', desc: 'Recurso especializado para mejoras de mayor impacto.' },
+      food: { iconName: 'box', tone: '', desc: 'Apoyo de ciclo para trabajo, mascota y estabilidad de recursos.' },
     };
 
     return `
@@ -284,10 +320,10 @@ export function createSecondaryViews(deps) {
               ${sectionHeader('Soporte', 'Consumibles útiles')}
               <div class="grid gap-2">
                 ${supportOffers.map((entry) => {
-                  const meta = supportMeta[entry.kind] || { icon: '•', tone: '', desc: 'Consumible de soporte para mantener el ciclo.' };
+                  const meta = supportMeta[entry.kind] || { iconName: 'box', tone: '', desc: 'Consumible de soporte para mantener el ciclo.' };
                   const qty = Object.values(entry.reward || {}).reduce((sumValue, value) => sumValue + Number(value || 0), 0);
                   const label = qty > 1 ? `${entry.label} x${qty}` : entry.label;
-                  return `<button type="button" class="btn ${meta.tone}" onclick="game.buyResource('${entry.kind}')" ${tooltipAttr(`${meta.desc} Precio dinámico según nivel y poder actual: ${fmt(entry.price)} de oro. Compra solo si acelera tu siguiente objetivo.`)}>${meta.icon} ${label} · ${fmt(entry.price)} oro</button>`;
+                  return `<button type="button" class="btn ${meta.tone}" onclick="game.buyResource('${entry.kind}')" ${tooltipAttr(`${meta.desc} Precio dinámico según nivel y poder actual: ${fmt(entry.price)} de oro. Compra solo si acelera tu siguiente objetivo.`)}>${icon(meta.iconName, 'h-4 w-4')} ${label} · ${fmt(entry.price)} Oro</button>`;
                 }).join('')}
               </div>
             </div>
@@ -306,11 +342,6 @@ export function createSecondaryViews(deps) {
     const availableNodes = (forgeState && Array.isArray(forgeState.availableNodes))
       ? forgeState.availableNodes.filter((node) => node.school === 'shared' || node.school === selectedSchool)
       : [];
-
-    const formatCost = (cost = {}) => Object.entries(cost)
-      .filter(([, value]) => value > 0)
-      .map(([key, value]) => `${fmt(value)} ${key}`)
-      .join(' · ');
 
     const formatOutcomes = (outcomes = []) => outcomes
       .map((entry) => `${Math.round((entry.chance || 0) * 100)}% ${rarityName(entry.rarity)}`)
@@ -388,8 +419,8 @@ export function createSecondaryViews(deps) {
                   <div class="font-bold">${SLOT_NAMES[slot]}</div>
                   <div class="text-sm text-slate-300/70 mt-1">Pieza aleatoria del hueco con presupuesto por nivel y rareza.</div>
                     <div class="grid gap-2 mt-3 text-xs text-slate-300/74">
-                      <div class="rounded-xl bg-white/[.04] p-2.5" ${tooltipAttr('Receta básica: coste reducido y resultado más estable. Útil para volumen y progreso temprano de equipo.')}>Básica: <b>${formatCost(basic.cost)}</b><br><span class="text-slate-300/62">${formatOutcomes(basic.outcomes)}</span></div>
-                      <div class="rounded-xl bg-white/[.04] p-2.5" ${tooltipAttr('Receta avanzada: mayor coste, mejor piso de rareza y más techo de calidad.')}>Avanzada: <b>${formatCost(advanced.cost)}</b><br><span class="text-slate-300/62">${formatOutcomes(advanced.outcomes)}</span></div>
+                      <div class="rounded-xl bg-white/[.04] p-2.5" ${tooltipAttr('Receta básica: coste reducido y resultado más estable. Útil para volumen y progreso temprano de equipo.')}>Básica: ${formatCostChips(basic.cost)}<br><span class="text-slate-300/62">${formatOutcomes(basic.outcomes)}</span></div>
+                      <div class="rounded-xl bg-white/[.04] p-2.5" ${tooltipAttr('Receta avanzada: mayor coste, mejor piso de rareza y más techo de calidad.')}>Avanzada: ${formatCostChips(advanced.cost)}<br><span class="text-slate-300/62">${formatOutcomes(advanced.outcomes)}</span></div>
                       <div class="rounded-xl bg-white/[.04] p-2.5">Escenario: <b>${Math.round((advanced.scenarioChances.favorable || 0) * 100)}%</b> favorable · <b>${Math.round((advanced.scenarioChances.neutral || 0) * 100)}%</b> neutral · <b>${Math.round((advanced.scenarioChances.unfavorable || 0) * 100)}%</b> desfavorable</div>
                     </div>
                     <div class="grid grid-cols-2 gap-2 mt-3">
@@ -418,10 +449,10 @@ export function createSecondaryViews(deps) {
                       <div class="text-xs text-slate-300/55 uppercase tracking-[.18em]">${SLOT_NAMES[slot]}</div>
                        <div class="font-black break-words ${item ? `rarity-${item.rarity}` : 'text-slate-400/80'}">${item ? item.name : 'Vacío'}</div>
                       <div class="text-sm text-slate-300/70 mt-1">${item ? `Nivel ${item.level} · Mejora +${item.upgrade || 0} · Afinidad ${item.affinityLevel || 0}` : 'Equipa algo para mejorarlo.'}</div>
-                      ${item && enhance ? `<div class="text-xs text-slate-300/62 mt-2">Enhance: ${Math.round(enhance.successChance * 100)}% · coste ${formatCost(enhance.cost)}</div>` : ''}
-                      ${item && reforge ? `<div class="text-xs text-slate-300/62 mt-1">Reforge total: ${Math.round(reforge.successChance * 100)}% · coste ${formatCost(reforge.cost)}</div>` : ''}
+                      ${item && enhance ? `<div class="text-xs text-slate-300/62 mt-2">Enhance: ${Math.round(enhance.successChance * 100)}% · Coste ${formatCostChips(enhance.cost)}</div>` : ''}
+                      ${item && reforge ? `<div class="text-xs text-slate-300/62 mt-1">Reforge total: ${Math.round(reforge.successChance * 100)}% · Coste ${formatCostChips(reforge.cost)}</div>` : ''}
                       ${item && reforge && Array.isArray(reforge.modes) ? `<div class="text-xs text-slate-300/62 mt-1">Parcial ${Math.round((reforge.modes.find((m) => m.mode === 'partial')?.successChance || 0) * 100)}% · Bloqueo ${Math.round((reforge.modes.find((m) => m.mode === 'lock')?.successChance || 0) * 100)}%</div>` : ''}
-                      ${item && stabilize ? `<div class="text-xs text-slate-300/62 mt-1">Stabilize: ${Math.round(stabilize.successChance * 100)}% · coste ${formatCost(stabilize.cost)}</div>` : ''}
+                      ${item && stabilize ? `<div class="text-xs text-slate-300/62 mt-1">Stabilize: ${Math.round(stabilize.successChance * 100)}% · Coste ${formatCostChips(stabilize.cost)}</div>` : ''}
                       ${item && transcend ? `<div class="text-xs text-slate-300/62 mt-1">Transcend: ${Math.round(transcend.successChance * 100)}% · ${transcend.from} → ${transcend.to}</div>` : ''}
                       <div class="grid grid-cols-2 gap-2 mt-3">
                         <button type="button" class="btn btn-gold !py-2" ${item ? `onclick="game.enhanceItem('${slot}')"` : 'disabled'} ${tooltipAttr('Mejora incremental y relativamente estable de la pieza equipada. Recomendado cuando ya estás conforme con sus afijos.')}>Enhance</button>
@@ -440,9 +471,9 @@ export function createSecondaryViews(deps) {
             <div class="glass rounded-3xl p-5">
               ${sectionHeader('Conversion', 'Materiales y reciclaje', 'Convierte excedentes de bajo tier a recursos de valor medio y alto con perdida controlada.')}
               <div class="grid gap-2">
-                <button type="button" class="btn" onclick="game.convertMaterials('iron_wood_to_essence')">20 hierro + 12 madera → 1 esencia</button>
-                <button type="button" class="btn" onclick="game.convertMaterials('essence_to_sigils')">8 esencia → 1 sigilo</button>
-                <button type="button" class="btn" onclick="game.convertMaterials('sigils_to_echo')">5 sigilos + 1 catalizador → 1 eco fragmento</button>
+                <button type="button" class="btn" onclick="game.convertMaterials('iron_wood_to_essence')">20 Hierro + 12 Madera + 80 Oro → 1 Esencia</button>
+                <button type="button" class="btn" onclick="game.convertMaterials('essence_to_sigils')">8 Esencia + 120 Oro → 1 Sigilo</button>
+                <button type="button" class="btn" onclick="game.convertMaterials('sigils_to_echo')">5 Sigilos + 1 Catalizador + 180 Oro → 1 Fragmento de Eco</button>
               </div>
             </div>
 
@@ -631,18 +662,7 @@ export function createSecondaryViews(deps) {
       epic: 'Epica',
       mythic: 'Mitica',
     };
-    const resourceLabel = {
-      shards: 'fragmentos',
-      essence: 'esencia',
-      food: 'comida',
-      sigils: 'sigilos',
-      catalysts: 'catalizadores',
-      echoShards: 'eco-fragmentos',
-    };
-    const formatCost = (cost) => Object.entries(cost || {})
-      .filter(([, value]) => Number(value || 0) > 0)
-      .map(([key, value]) => `${value} ${resourceLabel[key] || key}`)
-      .join(' · ');
+    const formatPetCost = (cost) => formatCost(cost || {});
     const bonusLabel = (key, value) => {
       const isPct = ['crit', 'dodge', 'block', 'lifesteal', 'attackPct', 'defensePct', 'hpPct', 'speedPct', 'goldPct', 'lootLuck', 'regenPct'].includes(key);
       const sign = value >= 0 ? '+' : '';
@@ -683,15 +703,15 @@ export function createSecondaryViews(deps) {
                 </div>
 
                 <div class="grid sm:grid-cols-3 gap-3 mt-4">
-                  <button type="button" class="btn btn-success" onclick="game.feedPet()" ${feedPreview && feedPreview.canFeed ? tooltipAttr(`Consume ${formatCost(feedPreview.costPerFeed)} para +1 XP.`) : 'disabled'}>${icon('box', 'h-4 w-4')}<span>Alimentar x1</span></button>
-                  <button type="button" class="btn btn-primary" onclick="game.feedPet(5)" ${feedPreviewBulk && feedPreviewBulk.canFeed ? tooltipAttr(`Intenta 5 alimentaciones. Coste estimado: ${formatCost(feedPreviewBulk.totalCost)}.`) : 'disabled'}>${icon('spark', 'h-4 w-4')}<span>Alimentar x5</span></button>
+                  <button type="button" class="btn btn-success" onclick="game.feedPet()" ${feedPreview && feedPreview.canFeed ? tooltipAttr(`Consume ${formatPetCost(feedPreview.costPerFeed)} para +1 XP.`) : 'disabled'}>${icon('box', 'h-4 w-4')}<span>Alimentar x1</span></button>
+                  <button type="button" class="btn btn-primary" onclick="game.feedPet(5)" ${feedPreviewBulk && feedPreviewBulk.canFeed ? tooltipAttr(`Intenta 5 alimentaciones. Coste estimado: ${formatPetCost(feedPreviewBulk.totalCost)}.`) : 'disabled'}>${icon('spark', 'h-4 w-4')}<span>Alimentar x5</span></button>
                   <button type="button" class="btn btn-danger" onclick="game.releasePet()" ${tooltipAttr('Libera la mascota activa. Recuperas una fraccion de recursos segun nivel y tier.')}>Liberar</button>
                 </div>
 
                 <div class="grid sm:grid-cols-2 gap-3 mt-4 text-sm">
                   <div class="rounded-2xl bg-white/[.04] p-3">
                     <div class="text-xs uppercase tracking-[.18em] text-slate-300/55">Coste actual por comida</div>
-                    <div class="mt-1">${feedPreview ? formatCost(feedPreview.costPerFeed) : 'No disponible'}</div>
+                    <div class="mt-1">${feedPreview ? formatPetCost(feedPreview.costPerFeed) : 'No disponible'}</div>
                   </div>
                   <div class="rounded-2xl bg-white/[.04] p-3">
                     <div class="text-xs uppercase tracking-[.18em] text-slate-300/55">Meta del siguiente nivel</div>
@@ -733,7 +753,7 @@ export function createSecondaryViews(deps) {
                         <div class="rounded-xl bg-white/[.04] p-2">Epica <b>${chance.epic || 0}%</b></div>
                         <div class="rounded-xl bg-white/[.04] p-2">Mitica <b>${chance.mythic || 0}%</b></div>
                       </div>
-                      <div class="text-xs text-slate-300/68 mt-3">Coste: ${formatCost(ritualData.cost)}</div>
+                      <div class="text-xs text-slate-300/68 mt-3">Coste: ${formatPetCost(ritualData.cost)}</div>
                       <button type="button" class="btn mt-3 w-full ${ritual.id === 'astral' ? 'btn-violet' : ritual.id === 'bonded' ? 'btn-primary' : ''}" onclick="game.hatchPet('${ritual.id}')" ${unlock && !pet ? '' : 'disabled'}>
                         ${pet ? 'Libera mascota actual' : `Invocar (${ritual.id})`}
                       </button>

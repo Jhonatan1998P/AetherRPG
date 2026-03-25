@@ -44,9 +44,9 @@ import { AetherViewContent } from './views-content.js';
     frame: 0,
     longPressTimer: 0,
     longPressTarget: null,
-    longPressTriggered: false,
-    suppressClickUntil: 0,
-    suppressClickTarget: null,
+    longPressPointerId: null,
+    longPressStartX: 0,
+    longPressStartY: 0,
   };
   let rafId = 0;
   let loopId = 0;
@@ -119,6 +119,105 @@ import { AetherViewContent } from './views-content.js';
         ? { text: 'Vida media', tone: 'warning' }
         : { text: 'Vida estable', tone: 'success' };
 
+    const int = (value) => Math.max(0, Math.round(Number(value || 0)));
+
+    const formatEta = (seconds) => {
+      const total = int(seconds);
+      const h = Math.floor(total / 3600);
+      const m = Math.floor((total % 3600) / 60);
+      const s = total % 60;
+      if (h > 0) return `${h}h ${m}m`;
+      if (m > 0) return `${m}m ${s}s`;
+      return `${s}s`;
+    };
+
+    const resourceTooltipHtml = (resourceKey) => {
+      const level = Math.max(1, Number(state.player.level || 1));
+      const strength = Math.max(0, Number((state.player.training && state.player.training.strength) || 0));
+      const endurance = Math.max(0, Number((state.player.training && state.player.training.endurance) || 0));
+      const weightedAttribute = strength * 0.3 + endurance * 0.7;
+      const attributeFactor = 1 + Math.log1p(weightedAttribute) * 0.08;
+      const stageFactor = level < 15
+        ? 0.9
+        : level < 35
+          ? 1.03
+          : 1.08;
+      const regenPct = Number(ds.regenPct || 0);
+      const momentum = Math.max(0, Number((state.player.relics && state.player.relics.momentum) || 0));
+
+      const data = {
+        hp: {
+          current: Number(state.player.hp || 0),
+          max: Number(ds.maxHp || 0),
+          base: 0.1 + regenPct * 0.14,
+          min: 0.06,
+          maxClamp: 0.48,
+          label: 'Vida',
+          tone: 'text-rose-200 bg-rose-400/18 border-rose-300/28',
+          fill: 'from-rose-400 via-pink-300 to-orange-300',
+        },
+        energy: {
+          current: Number(state.player.energy || 0),
+          max: Number(ds.maxEnergy || 0),
+          base: 0.12 + momentum * 0.006,
+          min: 0.07,
+          maxClamp: 0.38,
+          label: 'Energía',
+          tone: 'text-cyan-200 bg-cyan-400/18 border-cyan-300/28',
+          fill: 'from-cyan-300 via-sky-300 to-blue-400',
+        },
+        stamina: {
+          current: Number(state.player.stamina || 0),
+          max: Number(ds.maxStamina || 0),
+          base: 0.14 + momentum * 0.007,
+          min: 0.08,
+          maxClamp: 0.5,
+          label: 'Aguante',
+          tone: 'text-emerald-200 bg-emerald-400/18 border-emerald-300/28',
+          fill: 'from-emerald-300 via-lime-300 to-yellow-300',
+        },
+      };
+
+      const meta = data[resourceKey];
+      if (!meta || meta.max <= 0) return 'Recurso sin datos de regeneración.';
+
+      const perHourPctRaw = meta.base * attributeFactor * stageFactor;
+      const perHourPct = clamp(perHourPctRaw, meta.min, meta.maxClamp);
+      const perSecondFlat = (meta.max * perHourPct) / 3600;
+      const missing = Math.max(0, meta.max - meta.current);
+      const secondsToFull = perSecondFlat > 0 ? missing / perSecondFlat : 0;
+      const pctCurrent = meta.max > 0 ? clamp((meta.current / meta.max) * 100, 0, 100) : 0;
+      const regenPerMinute = perSecondFlat * 60;
+      const regenPerHour = perSecondFlat * 3600;
+
+      return `
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.14em] ${meta.tone}">${meta.label}</span>
+            <span class="text-[10px] text-slate-300/72 uppercase tracking-[.12em]">Regeneración</span>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+            <div class="flex items-center justify-between gap-2 text-[11px]">
+              <span class="text-slate-300/75">Actual</span>
+              <b class="text-white">${fmt(int(meta.current))} / ${fmt(int(meta.max))}</b>
+            </div>
+            <div class="mt-2 h-1.5 rounded-full bg-black/35 overflow-hidden">
+              <span class="block h-full rounded-full bg-gradient-to-r ${meta.fill}" style="width:${Math.round(pctCurrent)}%"></span>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+            <div class="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"><span class="text-slate-300/72">+ / min</span><div class="font-bold text-white">${fmt(int(regenPerMinute))}</div></div>
+            <div class="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"><span class="text-slate-300/72">+ / hora</span><div class="font-bold text-white">${fmt(int(regenPerHour))}</div></div>
+          </div>
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-slate-300/75">Carga completa</span>
+            <span class="font-semibold text-cyan-200">${formatEta(secondsToFull)}</span>
+          </div>
+          <div class="text-[10px] text-slate-300/62">Mantén presionado en móvil para ver este detalle.</div>
+        </div>
+      `.trim();
+    };
+
     const applyText = (selector, text) => {
       const el = root.querySelector(selector);
       if (el && el.textContent !== text) el.textContent = text;
@@ -131,7 +230,19 @@ import { AetherViewContent } from './views-content.js';
       if (el.style.width !== width) el.style.width = width;
     };
 
-    applyText('[data-hud-resources]', `${fmt(state.player.energy)}⚡ · ${fmt(state.player.stamina)}💪`);
+    const applyTooltip = (key) => {
+      const el = root.querySelector(`[data-hud-resource="${key}"]`);
+      if (!el) return;
+      const tooltipHtml = resourceTooltipHtml(key);
+      const current = el.getAttribute('data-tooltip-html') || '';
+      if (current !== tooltipHtml) el.setAttribute('data-tooltip-html', tooltipHtml);
+    };
+
+    const resourcesEl = root.querySelector('[data-hud-resources]');
+    if (resourcesEl) {
+      const resourcesHtml = `${fmt(state.player.energy)}${icon('bolt', 'h-4 w-4')} · ${fmt(state.player.stamina)}${icon('dumbbell', 'h-4 w-4')}`;
+      if (resourcesEl.innerHTML !== resourcesHtml) resourcesEl.innerHTML = resourcesHtml;
+    }
     applyText('[data-hud-current="hp"]', `${fmt(state.player.hp)} / ${fmt(ds.maxHp)}`);
     applyText('[data-hud-current="energy"]', `${fmt(state.player.energy)} / ${fmt(ds.maxEnergy)}`);
     applyText('[data-hud-current="stamina"]', `${fmt(state.player.stamina)} / ${fmt(ds.maxStamina)}`);
@@ -139,6 +250,9 @@ import { AetherViewContent } from './views-content.js';
     applyBar('hp', hpPct);
     applyBar('energy', energyPct);
     applyBar('stamina', staminaPct);
+    applyTooltip('hp');
+    applyTooltip('energy');
+    applyTooltip('stamina');
 
     applyText('[data-hud-stat="gold"]', fmt(state.player.gold));
     applyText('[data-hud-stat="potions"]', fmt(state.player.potions));
@@ -702,7 +816,7 @@ import { AetherViewContent } from './views-content.js';
   function initTooltips() {
     const el = document.createElement('div');
     el.id = 'ui-tooltip';
-    el.className = 'pointer-events-none fixed z-[80] hidden max-w-[290px] rounded-2xl border border-cyan-300/24 bg-slate-950/92 px-3 py-2 text-xs leading-relaxed text-slate-100 backdrop-blur-xl shadow-[0_12px_40px_rgba(2,6,23,.55)] opacity-0 translate-y-1 transition duration-150 ease-out';
+    el.className = 'pointer-events-none fixed z-[80] hidden max-w-[340px] rounded-2xl border border-cyan-300/24 bg-slate-950/92 px-3 py-2 text-xs leading-relaxed text-slate-100 backdrop-blur-xl shadow-[0_12px_40px_rgba(2,6,23,.55)] opacity-0 translate-y-1 transition duration-150 ease-out';
     document.body.appendChild(el);
     tooltip.el = el;
 
@@ -716,14 +830,13 @@ import { AetherViewContent } from './views-content.js';
       return raw.closest('[data-tooltip]');
     }
 
-    function isInteractiveTarget(target) {
-      if (!target || !(target instanceof Element)) return false;
-      return target.matches('button, a, input, select, textarea, [role="button"], [onclick], .btn, .nav-link, .mobile-nav-btn');
-    }
-
-    function isButtonLikeTarget(target) {
-      if (!target || !(target instanceof Element)) return false;
-      return target.matches('button, .btn, .nav-link, .mobile-nav-btn, [role="button"]');
+    function hudResourceTooltipTargetFromEvent(event) {
+      const raw = event.target;
+      if (!(raw instanceof Element)) return null;
+      const target = raw.closest('[data-hud-resource]');
+      if (!target) return null;
+      const key = target.getAttribute('data-hud-resource');
+      return key === 'hp' || key === 'energy' || key === 'stamina' ? target : null;
     }
 
     function clearLongPressState() {
@@ -731,9 +844,10 @@ import { AetherViewContent } from './views-content.js';
         clearTimeout(tooltip.longPressTimer);
         tooltip.longPressTimer = 0;
       }
-      if (tooltip.longPressTarget) tooltip.longPressTarget.classList.remove('tooltip-touch-armed');
       tooltip.longPressTarget = null;
-      tooltip.longPressTriggered = false;
+      tooltip.longPressPointerId = null;
+      tooltip.longPressStartX = 0;
+      tooltip.longPressStartY = 0;
     }
 
     function positionNow(target) {
@@ -757,7 +871,7 @@ import { AetherViewContent } from './views-content.js';
     }
 
     function showTooltip(target) {
-      const text = target && target.getAttribute('data-tooltip');
+      const text = target && (target.getAttribute('data-tooltip-html') || target.getAttribute('data-tooltip'));
       if (!text || !tooltip.el) return;
       if (tooltip.hideTimer) {
         clearTimeout(tooltip.hideTimer);
@@ -788,76 +902,45 @@ import { AetherViewContent } from './views-content.js';
     document.addEventListener('mouseover', (event) => {
       if (isCoarsePointer()) return;
       const target = tooltipTargetFromEvent(event);
-      if (target && isButtonLikeTarget(target)) return;
       if (target) showTooltip(target);
     });
     document.addEventListener('mouseout', (event) => {
       if (isCoarsePointer()) return;
       const target = tooltipTargetFromEvent(event);
-      if (target && isButtonLikeTarget(target)) return;
-      if (target) hideTooltip(target);
-    });
-    document.addEventListener('focusin', (event) => {
-      const target = tooltipTargetFromEvent(event);
-      if (target && isButtonLikeTarget(target)) return;
-      if (target) showTooltip(target);
-    });
-    document.addEventListener('focusout', (event) => {
-      const target = tooltipTargetFromEvent(event);
-      if (target && isButtonLikeTarget(target)) return;
       if (target) hideTooltip(target);
     });
     document.addEventListener('pointerdown', (event) => {
-      const target = tooltipTargetFromEvent(event);
-      if (!target) {
-        if (isCoarsePointer()) hideTooltip();
-        clearLongPressState();
-        return;
-      }
-      if (!isButtonLikeTarget(target)) return;
+      if (!isCoarsePointer()) return;
       clearLongPressState();
+      const target = hudResourceTooltipTargetFromEvent(event);
+      hideTooltip();
+      if (!target) return;
       tooltip.longPressTarget = target;
-      tooltip.longPressTarget.classList.add('tooltip-touch-armed');
+      tooltip.longPressPointerId = event.pointerId;
+      tooltip.longPressStartX = Number(event.clientX || 0);
+      tooltip.longPressStartY = Number(event.clientY || 0);
       tooltip.longPressTimer = window.setTimeout(() => {
         if (!tooltip.longPressTarget) return;
-        tooltip.longPressTriggered = true;
         showTooltip(tooltip.longPressTarget);
-      }, 450);
+      }, 500);
     }, true);
-    document.addEventListener('pointerup', () => {
+    document.addEventListener('pointerup', (event) => {
       if (!isCoarsePointer()) return;
-      if (tooltip.longPressTriggered && tooltip.longPressTarget) {
-        tooltip.suppressClickUntil = Date.now() + 750;
-        tooltip.suppressClickTarget = tooltip.longPressTarget;
-        window.setTimeout(() => {
-          if (Date.now() >= tooltip.suppressClickUntil) hideTooltip();
-        }, 1400);
-      }
+      if (tooltip.longPressPointerId !== null && event.pointerId !== tooltip.longPressPointerId) return;
       clearLongPressState();
     }, true);
-    document.addEventListener('pointercancel', () => {
+    document.addEventListener('pointercancel', (event) => {
+      if (!isCoarsePointer()) return;
+      if (tooltip.longPressPointerId !== null && event.pointerId !== tooltip.longPressPointerId) return;
       clearLongPressState();
     }, true);
-    document.addEventListener('click', (event) => {
-      const target = tooltipTargetFromEvent(event);
-      if (!target) return;
-      if (isButtonLikeTarget(target)) {
-        if (tooltip.suppressClickTarget === target && Date.now() <= tooltip.suppressClickUntil) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        return;
-      }
+    document.addEventListener('pointermove', (event) => {
       if (!isCoarsePointer()) return;
-      if (!isInteractiveTarget(target)) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (tooltip.activeTarget === target && tooltip.el && !tooltip.el.classList.contains('hidden')) {
-          hideTooltip();
-        } else {
-          showTooltip(target);
-        }
-      }
+      if (!tooltip.longPressTarget) return;
+      if (tooltip.longPressPointerId !== null && event.pointerId !== tooltip.longPressPointerId) return;
+      const dx = Number(event.clientX || 0) - tooltip.longPressStartX;
+      const dy = Number(event.clientY || 0) - tooltip.longPressStartY;
+      if (Math.hypot(dx, dy) > 12) clearLongPressState();
     }, true);
     document.addEventListener('mousemove', () => {
       if (tooltip.activeTarget) positionTooltip(tooltip.activeTarget);

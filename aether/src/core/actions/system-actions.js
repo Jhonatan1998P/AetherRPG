@@ -13,6 +13,7 @@ export const SYSTEM_ACTION_REGIONS = {
   buyMarketItem: ['hud', 'content'],
   buyResource: ['hud', 'content'],
   equipItem: ['hud', 'content'],
+  equipBestLoadout: ['hud', 'content'],
   unequipItem: ['hud', 'content'],
   sellItem: ['hud', 'content'],
   salvageItem: ['hud', 'content'],

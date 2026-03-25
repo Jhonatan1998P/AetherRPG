@@ -225,6 +225,16 @@ export function createMainViews(deps) {
     const equippedPreview = ['weapon', 'chest', 'ring', 'amulet'].map(equippedSlotCard).join('');
     const filter = state.ui.inventoryFilter;
     const totalItems = state.player.inventory.length;
+    const consumablesTotal = (state.player.potions || 0)
+      + (state.player.keys || 0)
+      + (state.player.food || 0)
+      + (state.player.shards || 0);
+    const forgeMaterialsTotal = (state.player.iron || 0)
+      + (state.player.wood || 0)
+      + (state.player.essence || 0)
+      + (state.player.sigils || 0)
+      + (state.player.catalysts || 0)
+      + (state.player.echoShards || 0);
     const upgrades = state.player.inventory.filter((item) => {
       const equipped = state.player.equipment[item.slot];
       return !equipped || (item.score || 0) > (equipped.score || 0);
@@ -235,30 +245,33 @@ export function createMainViews(deps) {
       <div class="space-y-5">
         ${pageLead('inventario', `Capacidad: <b>${state.player.inventory.length}/${maxInventory()}</b> · Mejoras potenciales: <b>${upgrades}</b>`, [
           actionButton('🧹 Gestión automática', 'btn-primary', 'game.autoManage()', 'Vende y recicla excedentes de forma automática.'),
+          actionButton(`${icon('spark', 'h-4 w-4')} Mejor equipo`, 'btn-success', 'game.equipBestLoadout()', 'Equipa automáticamente la mejor pieza disponible por slot, respetando tu nivel actual.'),
           actionButton('⚒️ Forja', '', "game.setView('forja')"),
           actionButton('🛒 Mercado', 'btn-violet', "game.setView('mercado')")
         ].join(''))}
 
         ${actionBar([
           actionButton('🧹 Limpiar', 'btn-primary !py-3', 'game.autoManage()'),
-          actionButton('⚒️ Forja', '!py-3', "game.setView('forja')")
+          actionButton(`${icon('spark', 'h-4 w-4')} Mejor`, 'btn-success !py-3', 'game.equipBestLoadout()')
         ])}
 
         <div class="grid xl:grid-cols-[minmax(0,1fr),320px] gap-5">
           <section class="glass rounded-3xl p-5">
             ${sectionHeader('Mochila', 'Filtra, compara y actúa', 'El inventario prioriza lectura rápida de mejoras y acciones de alto impacto.')}
 
-            <div class="grid sm:grid-cols-3 gap-3 mb-4">
+            <div class="grid sm:grid-cols-5 gap-3 mb-4">
               ${htmlStat('Objetos', totalItems, 'Total en mochila')}
               ${htmlStat('Mejoras', upgrades, 'Comparadas contra equipado')}
               ${htmlStat('Raros+', legendary, 'Legendarios y míticos')}
+              ${htmlStat('Consumibles', consumablesTotal, 'No ocupan espacio de mochila')}
+              ${htmlStat('Mat. Forja', forgeMaterialsTotal, 'No ocupan espacio de mochila')}
             </div>
 
             <div class="space-y-3 mb-4">
               <div>
                 <div class="text-xs uppercase tracking-[.18em] text-slate-300/55">Filtro por tipo</div>
                 <div class="filters-row mt-2">
-                  ${['all', ...SLOT_ORDER].map((itemFilter) => `
+                  ${['all', 'consumables', 'forgeMaterials', ...SLOT_ORDER].map((itemFilter) => `
                     <button type="button" class="btn filter-pill ${filter === itemFilter ? 'active tab-btn' : ''}" onclick="game.setInventoryFilter('${itemFilter}')" ${tooltipAttr(`Filtra la mochila por ${translateFilter(itemFilter).toLowerCase()} para comparar piezas similares con mayor precisión.`)}>${translateFilter(itemFilter)}</button>
                   `).join('')}
                 </div>

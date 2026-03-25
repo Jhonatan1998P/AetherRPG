@@ -63,6 +63,138 @@ const {
   pageLead,
 } = runtime;
 
+const RESOURCE_LABELS = {
+  gold: 'Oro',
+  iron: 'Hierro',
+  wood: 'Madera',
+  essence: 'Esencia',
+  sigils: 'Sigilos',
+  catalysts: 'Catalizadores',
+  echoShards: 'Fragmentos de Eco',
+  keys: 'Llaves',
+  potions: 'Pociones',
+  shards: 'Fragmentos',
+  food: 'Comida',
+};
+
+function formatResourceCost(cost = {}) {
+  return Object.entries(cost)
+    .filter(([, value]) => Number(value || 0) > 0)
+    .map(([key, value]) => `${fmt(value)} ${RESOURCE_LABELS[key] || key}`)
+    .join(' · ');
+}
+
+const CONSUMABLE_DEFS = [
+  {
+    key: 'potions',
+    label: 'Pociones',
+    iconName: 'flask',
+    tone: 'text-emerald-200 border-emerald-300/25 bg-emerald-400/10',
+    detail: 'Recupera vida al instante para sostener combates sin pausar el ritmo.',
+    quickAction: `<button type="button" class="btn btn-success !py-2 text-xs" onclick="game.usePotion()">${icon('flask', 'h-4 w-4')} Usar</button>`,
+  },
+  {
+    key: 'keys',
+    label: 'Llaves de Mazmorra',
+    iconName: 'key',
+    tone: 'text-violet-200 border-violet-300/25 bg-violet-400/10',
+    detail: 'Recurso de entrada a mazmorra para progresar en pisos y botín especializado.',
+    quickAction: `<button type="button" class="btn btn-violet !py-2 text-xs" onclick="game.setView('mazmorra')">${icon('castle', 'h-4 w-4')} Ir a Mazmorra</button>`,
+  },
+  {
+    key: 'food',
+    label: 'Comida',
+    iconName: 'box',
+    tone: 'text-orange-200 border-orange-300/25 bg-orange-400/10',
+    detail: 'Suministro de soporte para crianza y progreso de mascota.',
+    quickAction: `<button type="button" class="btn !py-2 text-xs" onclick="game.setView('mascota')">${icon('paw', 'h-4 w-4')} Ver Mascota</button>`,
+  },
+  {
+    key: 'shards',
+    label: 'Fragmentos',
+    iconName: 'spark',
+    tone: 'text-cyan-200 border-cyan-300/25 bg-cyan-400/10',
+    detail: 'Recurso flexible usado en sistemas de apoyo y progresión secundaria.',
+    quickAction: `<button type="button" class="btn !py-2 text-xs" onclick="game.setView('forja')">${icon('hammer', 'h-4 w-4')} Ir a Forja</button>`,
+  },
+];
+
+const FORGE_MATERIAL_DEFS = [
+  {
+    key: 'iron',
+    label: 'Hierro',
+    iconName: 'hammer',
+    tone: 'text-slate-200 border-slate-300/25 bg-slate-400/10',
+    detail: 'Base de forja para fabricar equipo y mejoras tempranas.',
+    quickAction: `<button type="button" class="btn !py-2 text-xs" onclick="game.setView('forja')">${icon('hammer', 'h-4 w-4')} Ir a Forja</button>`,
+  },
+  {
+    key: 'wood',
+    label: 'Madera',
+    iconName: 'feather',
+    tone: 'text-lime-200 border-lime-300/25 bg-lime-400/10',
+    detail: 'Material de soporte para recetas básicas de forja.',
+    quickAction: `<button type="button" class="btn !py-2 text-xs" onclick="game.setView('forja')">${icon('hammer', 'h-4 w-4')} Ir a Forja</button>`,
+  },
+  {
+    key: 'essence',
+    label: 'Esencia',
+    iconName: 'spark',
+    tone: 'text-sky-200 border-sky-300/25 bg-sky-400/10',
+    detail: 'Material esencial para craft, mejora y conversiones de forja.',
+    quickAction: `<button type="button" class="btn !py-2 text-xs" onclick="game.setView('forja')">${icon('hammer', 'h-4 w-4')} Ir a Forja</button>`,
+  },
+  {
+    key: 'sigils',
+    label: 'Sigilos',
+    iconName: 'pin',
+    tone: 'text-indigo-200 border-indigo-300/25 bg-indigo-400/10',
+    detail: 'Material especializado para acciones avanzadas de forja.',
+    quickAction: `<button type="button" class="btn !py-2 text-xs" onclick="game.setView('forja')">${icon('hammer', 'h-4 w-4')} Ir a Forja</button>`,
+  },
+  {
+    key: 'catalysts',
+    label: 'Catalizadores',
+    iconName: 'gem',
+    tone: 'text-fuchsia-200 border-fuchsia-300/25 bg-fuchsia-400/10',
+    detail: 'Componente avanzado para estabilizar y trascender piezas.',
+    quickAction: `<button type="button" class="btn !py-2 text-xs" onclick="game.setView('forja')">${icon('hammer', 'h-4 w-4')} Ir a Forja</button>`,
+  },
+  {
+    key: 'echoShards',
+    label: 'Fragmentos de Eco',
+    iconName: 'feather',
+    tone: 'text-rose-200 border-rose-300/25 bg-rose-400/10',
+    detail: 'Recurso de alto nivel para pasos finales de forja profunda.',
+    quickAction: `<button type="button" class="btn !py-2 text-xs" onclick="game.setView('forja')">${icon('hammer', 'h-4 w-4')} Ir a Forja</button>`,
+  },
+];
+
+function resourceEntries(defs) {
+  return defs.map((entry) => ({ ...entry, amount: Number(state.player[entry.key] || 0) }));
+}
+
+function resourceCards(entries, title, subtitle) {
+  return `
+    <div class="glass rounded-2xl p-4 mb-4">
+      <div class="text-xs uppercase tracking-[.18em] text-slate-300/55">${title}</div>
+      <div class="text-sm text-slate-300/70 mt-1">${subtitle}</div>
+      <div class="grid sm:grid-cols-2 2xl:grid-cols-3 gap-3 mt-3">
+        ${entries.map((entry) => `
+          <div class="rounded-2xl border p-3 ${entry.tone}">
+            <div class="flex items-center justify-between gap-2">
+              <div class="inline-flex items-center gap-2 font-bold text-sm">${icon(entry.iconName, 'h-4 w-4')}${entry.label}</div>
+              <div class="rounded-full border border-white/20 bg-black/20 px-2 py-0.5 text-xs font-black">x${fmt(entry.amount)}</div>
+            </div>
+            <div class="text-xs text-slate-200/80 mt-2">${entry.detail}</div>
+            <div class="mt-3">${entry.quickAction}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function equippedSlotCard(slot) {
   const item = state.player.equipment[slot];
   return `
@@ -237,11 +369,50 @@ function durationChoiceCard(seconds, tone, summary) {
 }
 
 function inventoryCards() {
+  const consumables = resourceEntries(CONSUMABLE_DEFS);
+  const forgeMaterials = resourceEntries(FORGE_MATERIAL_DEFS);
+  const consumablesBlock = resourceCards(
+    consumables,
+    'Consumibles',
+    'No ocupan espacio de mochila y siempre están disponibles por cantidad.',
+  );
+  const forgeMaterialsBlock = resourceCards(
+    forgeMaterials,
+    'Materiales de Forja',
+    'Tampoco ocupan espacio de mochila. Úsalos para fabricar, mejorar y convertir piezas.',
+  );
   let items = [...state.player.inventory];
   const filter = state.ui.inventoryFilter;
+  if (filter === 'consumables') {
+    return `
+      <div class="grid sm:grid-cols-3 gap-3 mb-4">
+        ${htmlStat('Consumibles', consumables.length)}
+        ${htmlStat('Unidades totales', consumables.reduce((sumValue, entry) => sumValue + Number(entry.amount || 0), 0))}
+        ${htmlStat('Capacidad', `${state.player.inventory.length}/${maxInventory()}`, 'Sin impacto por consumibles')}
+      </div>
+      ${consumablesBlock}
+    `;
+  }
+  if (filter === 'forgeMaterials') {
+    return `
+      <div class="grid sm:grid-cols-3 gap-3 mb-4">
+        ${htmlStat('Materiales', forgeMaterials.length)}
+        ${htmlStat('Unidades totales', forgeMaterials.reduce((sumValue, entry) => sumValue + Number(entry.amount || 0), 0))}
+        ${htmlStat('Capacidad', `${state.player.inventory.length}/${maxInventory()}`, 'Sin impacto por materiales')}
+      </div>
+      ${forgeMaterialsBlock}
+    `;
+  }
   if (filter !== 'all') items = items.filter((item) => item.slot === filter || item.rarity === filter);
-  if (!items.length) {
-    return '<div class="glass rounded-2xl p-5 text-slate-300/75">Tu inventario está vacío o el filtro no devuelve resultados.</div>';
+  if (!items.length && filter === 'all') {
+    return `
+      ${consumablesBlock}
+      ${forgeMaterialsBlock}
+      <div class="glass rounded-2xl p-5 text-slate-300/75">No tienes equipo en la mochila ahora mismo. Puedes seguir usando tus consumibles.</div>
+    `;
+  }
+  if (!items.length && filter !== 'all') {
+    return '<div class="glass rounded-2xl p-5 text-slate-300/75">No hay piezas en este filtro. Prueba con otro tipo o revisa Consumibles / Materiales de Forja.</div>';
   }
 
   const pageSize = Math.max(6, state.ui.inventoryPageSize || 18);
@@ -251,6 +422,8 @@ function inventoryCards() {
   const pageItems = items.slice(start, start + pageSize);
 
   return `
+    ${filter === 'all' ? consumablesBlock : ''}
+    ${filter === 'all' ? forgeMaterialsBlock : ''}
     ${inventorySummaryCards(items)}
     <div class="text-sm text-slate-300/72 mb-4">Mostrando <b>${start + 1}</b>–<b>${Math.min(start + pageSize, items.length)}</b> de <b>${items.length}</b> objetos filtrados.</div>
     <div class="grid sm:grid-cols-2 2xl:grid-cols-3 gap-3">
@@ -290,10 +463,10 @@ function inventoryCards() {
                 <button type="button" class="btn !py-2 text-xs" onclick="game.salvageItem('${item.id}')">Reciclar</button>
               </div>
               <div class="grid grid-cols-2 gap-2">
-                <button type="button" class="btn btn-violet !py-2 text-xs" onclick="game.reforgeItem('${item.id}')" ${reforgePreview ? tooltipAttr(`Retemplado total: vuelve a tirar afijos con mayor varianza. Coste: ${Object.entries(reforgePreview.cost).filter(([, value]) => value > 0).map(([key, value]) => `${value} ${key}`).join(', ')}.`) : 'disabled'}>Retemplar</button>
+                <button type="button" class="btn btn-violet !py-2 text-xs" onclick="game.reforgeItem('${item.id}')" ${reforgePreview ? tooltipAttr(`Retemplado total: vuelve a tirar afijos con mayor varianza. Coste: ${formatResourceCost(reforgePreview.cost)}.`) : 'disabled'}>Retemplar</button>
                 <button type="button" class="btn btn-gold !py-2 text-xs" onclick="game.transcendItem('${item.id}')" ${transcendPreview ? tooltipAttr(`Trascender: ${transcendPreview.from} a ${transcendPreview.to}. Probabilidad de éxito ${Math.round(transcendPreview.successChance * 100)}%.`) : 'disabled'}>Trascender</button>
               </div>
-              <button type="button" class="btn !py-2 text-xs mt-2" onclick="game.stabilizeItem('${item.id}')" ${stabilizePreview ? tooltipAttr(`Estabilizar: reduce varianza y mejora consistencia de la pieza. Probabilidad ${Math.round(stabilizePreview.successChance * 100)}%. Coste ${Object.entries(stabilizePreview.cost).filter(([, value]) => value > 0).map(([key, value]) => `${value} ${key}`).join(', ')}.`) : 'disabled'}>Stabilize</button>
+              <button type="button" class="btn !py-2 text-xs mt-2" onclick="game.stabilizeItem('${item.id}')" ${stabilizePreview ? tooltipAttr(`Estabilizar: reduce varianza y mejora consistencia de la pieza. Probabilidad ${Math.round(stabilizePreview.successChance * 100)}%. Coste: ${formatResourceCost(stabilizePreview.cost)}.`) : 'disabled'}>Stabilize</button>
             </div>
           </div>
         `;

@@ -55,6 +55,53 @@ const REFORGE_MODE_DEFS = {
 const CHANCE_STATS = new Set(['crit', 'dodge', 'block', 'lifesteal']);
 const MATERIAL_KEYS = ['iron', 'wood', 'essence', 'sigils', 'echoShards', 'catalysts'];
 
+const RESOURCE_LABELS = {
+  gold: 'Oro',
+  iron: 'Hierro',
+  wood: 'Madera',
+  essence: 'Esencia',
+  sigils: 'Sigilos',
+  echoShards: 'Fragmentos de Eco',
+  catalysts: 'Catalizadores',
+  keys: 'Llaves',
+  potions: 'Pociones',
+  shards: 'Fragmentos',
+  food: 'Comida',
+};
+
+function formatAmount(value) {
+  return Math.round(Number(value || 0)).toLocaleString('es-ES');
+}
+
+function resourceLabel(key) {
+  return RESOURCE_LABELS[key] || key;
+}
+
+function formatCostLine(cost = {}) {
+  const parts = Object.entries(cost)
+    .filter(([, value]) => Number(value || 0) > 0)
+    .map(([key, value]) => `${formatAmount(value)} ${resourceLabel(key)}`);
+  return parts.length ? parts.join(' · ') : 'Sin coste';
+}
+
+function missingCost(state, cost = {}) {
+  const out = {};
+  Object.entries(cost).forEach(([key, value]) => {
+    const needed = Number(value || 0);
+    if (needed <= 0) return;
+    const current = Number((state.player && state.player[key]) || 0);
+    if (current < needed) out[key] = needed - current;
+  });
+  return out;
+}
+
+function forgeMissingCostMessage(state, actionLabel, totalCost = {}) {
+  const missing = missingCost(state, totalCost);
+  const missingText = formatCostLine(missing);
+  const totalText = formatCostLine(totalCost);
+  return `⚒️ ${actionLabel}: te faltan <b>${missingText}</b>.<br>Coste requerido: <b>${totalText}</b>.`;
+}
+
 const SCARCITY_MULT = {
   common: 1,
   uncommon: 1.16,
@@ -208,6 +255,16 @@ export function createEconomyDomain(deps) {
 
   function getAnyOwnedItem(state, itemId) {
     return getInventoryItem(state, itemId) || Object.values(state.player.equipment).find((item) => item && item.id === itemId);
+  }
+
+  function requiredLevelForItem(item) {
+    if (!item) return 1;
+    return Math.max(1, Number(item.itemLevel || item.level || 1));
+  }
+
+  function canEquipItemByLevel(state, item) {
+    const playerLevel = Math.max(1, Number((state.player && state.player.level) || 1));
+    return playerLevel >= requiredLevelForItem(item);
   }
 
   function sortInventory(state) {
@@ -620,9 +677,16 @@ export function createEconomyDomain(deps) {
   }
 
   function equipItem(state, itemId, ctx) {
-    const { addJournal } = ctx;
+    const { addJournal, toast } = ctx;
     const item = getInventoryItem(state, itemId);
     if (!item) return;
+    const requiredLevel = requiredLevelForItem(item);
+    if (!canEquipItemByLevel(state, item)) {
+      if (typeof toast === 'function') {
+        toast(`No puedes equipar <b>${item.name}</b> todavía. Requiere nivel <b>${requiredLevel}</b>.`, 'danger');
+      }
+      return;
+    }
     const slot = item.slot;
     const equipped = state.player.equipment[slot];
     state.player.equipment[slot] = item;
@@ -631,6 +695,49 @@ export function createEconomyDomain(deps) {
     sortInventory(state);
     state.stats.equippedUpgrades = (state.stats.equippedUpgrades || 0) + 1;
     addJournal('🧷', `Equipas <span class="rarity-${item.rarity}">${item.name}</span>.`);
+  }
+
+  function equipBestLoadout(state, ctx) {
+    const { addJournal, toast } = ctx;
+    const slots = Array.isArray(SLOT_ORDER) ? SLOT_ORDER : Object.keys(state.player.equipment || {});
+    let changed = 0;
+    let lockedByLevel = 0;
+
+    slots.forEach((slot) => {
+      const equipped = state.player.equipment[slot];
+      const candidates = state.player.inventory
+        .filter((item) => item && item.slot === slot)
+        .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+      if (!candidates.length) return;
+
+      const bestAny = candidates[0];
+      const bestEquipable = candidates.find((item) => canEquipItemByLevel(state, item));
+      if (!bestEquipable) {
+        if (bestAny && !canEquipItemByLevel(state, bestAny)) lockedByLevel += 1;
+        return;
+      }
+
+      if (equipped && Number(equipped.score || 0) >= Number(bestEquipable.score || 0)) return;
+
+      state.player.inventory = state.player.inventory.filter((entry) => entry.id !== bestEquipable.id);
+      if (equipped) state.player.inventory.push(equipped);
+      state.player.equipment[slot] = bestEquipable;
+      changed += 1;
+    });
+
+    sortInventory(state);
+    if (changed > 0) {
+      state.stats.equippedUpgrades = (state.stats.equippedUpgrades || 0) + changed;
+      if (typeof addJournal === 'function') addJournal('🧩', `Optimización automática: equipas ${changed} mejora(s) en tu equipo.`);
+      if (typeof toast === 'function') toast(`Equipo optimizado: ${changed} mejora(s) equipada(s).`, 'success');
+      return { changed, lockedByLevel };
+    }
+
+    if (typeof toast === 'function') {
+      if (lockedByLevel > 0) toast(`No hubo cambios. ${lockedByLevel} mejor(a/s) supera(n) tu nivel actual.`, 'cyan');
+      else toast('No hubo cambios: ya llevas las mejores piezas disponibles.', 'cyan');
+    }
+    return { changed: 0, lockedByLevel };
   }
 
   function unequipItem(state, slot, ctx) {
@@ -991,7 +1098,7 @@ export function createEconomyDomain(deps) {
     const cost = scaledTierCost(state, slot, tierKey);
 
     if (!hasCost(state, cost)) {
-      toast('Te faltan materiales', 'danger');
+      toast(forgeMissingCostMessage(state, 'Forja', cost), 'danger');
       return;
     }
     if (!hasInventorySpace(state, maxInventory)) {
@@ -1110,7 +1217,7 @@ export function createEconomyDomain(deps) {
 
     const cost = enhanceCost(state, item);
     if (!hasCost(state, cost)) {
-      toast('No tienes materiales suficientes', 'danger');
+      toast(forgeMissingCostMessage(state, 'Enhance', cost), 'danger');
       return;
     }
     spendCost(state, cost);
@@ -1239,7 +1346,7 @@ export function createEconomyDomain(deps) {
 
     const cost = reforgeCost(state, item, modeDef.id);
     if (!hasCost(state, cost)) {
-      toast('Te faltan recursos para retemplar', 'danger');
+      toast(forgeMissingCostMessage(state, 'Retemplado', cost), 'danger');
       return;
     }
 
@@ -1365,7 +1472,7 @@ export function createEconomyDomain(deps) {
 
     const cost = transcendCost(state, item);
     if (!hasCost(state, cost)) {
-      toast('No tienes recursos para trascender', 'danger');
+      toast(forgeMissingCostMessage(state, 'Trascender', cost), 'danger');
       return;
     }
     spendCost(state, cost);
@@ -1472,7 +1579,7 @@ export function createEconomyDomain(deps) {
 
     const cost = stabilizeCost(state, item);
     if (!hasCost(state, cost)) {
-      toast('No tienes recursos para estabilizar', 'danger');
+      toast(forgeMissingCostMessage(state, 'Estabilizar', cost), 'danger');
       return;
     }
     spendCost(state, cost);
@@ -1553,7 +1660,7 @@ export function createEconomyDomain(deps) {
     const recipe = recipes[recipeId];
     if (!recipe) return;
     if (!hasCost(state, recipe.consume)) {
-      toast('No tienes materiales para convertir', 'danger');
+      toast(forgeMissingCostMessage(state, 'Conversión de materiales', recipe.consume), 'danger');
       return;
     }
     spendCost(state, recipe.consume);
@@ -1718,6 +1825,7 @@ export function createEconomyDomain(deps) {
     removeInventoryItem,
     getInventoryItem,
     equipItem,
+    equipBestLoadout,
     unequipItem,
     sellPriceFor,
     sellItem,

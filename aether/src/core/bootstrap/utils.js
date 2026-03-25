@@ -44,6 +44,8 @@
 
   const FILTER_LABELS = {
     all: 'Todo',
+    consumables: 'Consumibles',
+    forgeMaterials: 'Materiales de Forja',
     weapon: 'Armas',
     offhand: 'Mano izquierda',
     helm: 'Cascos',

@@ -1114,7 +1114,11 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
   }
 
   function equipItem(itemId) {
-    return economyDomain.equipItem(state, itemId, { addJournal });
+    return economyDomain.equipItem(state, itemId, { addJournal, toast });
+  }
+
+  function equipBestLoadout() {
+    return economyDomain.equipBestLoadout(state, { addJournal, toast });
   }
 
   function unequipItem(slot) {
@@ -1855,6 +1859,12 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     }
     spendResourceCost(cost);
     const pet = pickPetByRitual(ritual.id);
+    const unlockBudget = Math.max(1, Number(state.player.level || 1)) + Math.max(0, Number(state.player.ascension || 0)) * 2;
+    if (Number((pet && pet.unlockLevel) || 1) > unlockBudget) {
+      addResourceCost(cost);
+      toast(`No puedes activar esa mascota todavía. Requiere nivel ${pet.unlockLevel}.`, 'danger');
+      return;
+    }
     state.player.pet = pet.id;
     state.player.petLevel = 1;
     state.player.petXp = 0;
@@ -2076,6 +2086,7 @@ import { createProgressionDomain } from '../../features/gameplay/domain/progress
     removeInventoryItem,
     getInventoryItem,
     equipItem,
+    equipBestLoadout,
     unequipItem,
     sellItem,
     salvageItem,

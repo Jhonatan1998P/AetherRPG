@@ -13,8 +13,114 @@ const {
   maxInventory,
   icon,
   withIcon,
+  escapeAttr,
   tooltipAttr,
 } = runtime;
+
+function clampRange(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function int(value) {
+  return Math.max(0, Math.round(Number(value || 0)));
+}
+
+function formatEta(seconds) {
+  const total = int(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function regenDetail(resourceKey, state, ds) {
+  const level = Math.max(1, Number(state.player.level || 1));
+  const strength = Math.max(0, Number((state.player.training && state.player.training.strength) || 0));
+  const endurance = Math.max(0, Number((state.player.training && state.player.training.endurance) || 0));
+  const weightedAttribute = strength * 0.3 + endurance * 0.7;
+  const attributeFactor = 1 + Math.log1p(weightedAttribute) * 0.08;
+  const stageFactor = level < 15
+    ? 0.9
+    : level < 35
+      ? 1.03
+      : 1.08;
+  const regenPct = Number(ds.regenPct || 0);
+  const momentum = Math.max(0, Number((state.player.relics && state.player.relics.momentum) || 0));
+
+  const values = {
+    hp: {
+      current: Number(state.player.hp || 0),
+      max: Number(ds.maxHp || 0),
+      base: 0.1 + regenPct * 0.14,
+      min: 0.06,
+      maxClamp: 0.48,
+      label: 'Vida',
+      tone: 'text-rose-200 bg-rose-400/18 border-rose-300/28',
+      fill: 'from-rose-400 via-pink-300 to-orange-300',
+    },
+    energy: {
+      current: Number(state.player.energy || 0),
+      max: Number(ds.maxEnergy || 0),
+      base: 0.12 + momentum * 0.006,
+      min: 0.07,
+      maxClamp: 0.38,
+      label: 'Energía',
+      tone: 'text-cyan-200 bg-cyan-400/18 border-cyan-300/28',
+      fill: 'from-cyan-300 via-sky-300 to-blue-400',
+    },
+    stamina: {
+      current: Number(state.player.stamina || 0),
+      max: Number(ds.maxStamina || 0),
+      base: 0.14 + momentum * 0.007,
+      min: 0.08,
+      maxClamp: 0.5,
+      label: 'Aguante',
+      tone: 'text-emerald-200 bg-emerald-400/18 border-emerald-300/28',
+      fill: 'from-emerald-300 via-lime-300 to-yellow-300',
+    },
+  };
+
+  const meta = values[resourceKey];
+  if (!meta || meta.max <= 0) return 'Recurso sin datos de regeneración.';
+
+  const perHourPctRaw = meta.base * attributeFactor * stageFactor;
+  const perHourPct = clampRange(perHourPctRaw, meta.min, meta.maxClamp);
+  const perSecondFlat = (meta.max * perHourPct) / 3600;
+  const missing = Math.max(0, meta.max - meta.current);
+  const secondsToFull = perSecondFlat > 0 ? missing / perSecondFlat : 0;
+  const pctCurrent = meta.max > 0 ? clampRange((meta.current / meta.max) * 100, 0, 100) : 0;
+  const regenPerMinute = perSecondFlat * 60;
+  const regenPerHour = perSecondFlat * 3600;
+
+  return `
+    <div class="space-y-2.5">
+      <div class="flex items-center justify-between gap-2">
+        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.14em] ${meta.tone}">${meta.label}</span>
+        <span class="text-[10px] text-slate-300/72 uppercase tracking-[.12em]">Regeneración</span>
+      </div>
+      <div class="rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
+        <div class="flex items-center justify-between gap-2 text-[11px]">
+          <span class="text-slate-300/75">Actual</span>
+          <b class="text-white">${fmt(int(meta.current))} / ${fmt(int(meta.max))}</b>
+        </div>
+        <div class="mt-2 h-1.5 rounded-full bg-black/35 overflow-hidden">
+          <span class="block h-full rounded-full bg-gradient-to-r ${meta.fill}" style="width:${Math.round(pctCurrent)}%"></span>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+        <div class="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"><span class="text-slate-300/72">+ / min</span><div class="font-bold text-white">${fmt(int(regenPerMinute))}</div></div>
+        <div class="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"><span class="text-slate-300/72">+ / hora</span><div class="font-bold text-white">${fmt(int(regenPerHour))}</div></div>
+      </div>
+      <div class="flex items-center justify-between text-[11px]">
+        <span class="text-slate-300/75">Carga completa</span>
+        <span class="font-semibold text-cyan-200">${formatEta(secondsToFull)}</span>
+      </div>
+      <div class="text-[10px] text-slate-300/62">Mantén presionado en móvil para ver este detalle.</div>
+    </div>
+  `.trim();
+}
 
 export function renderHud() {
   const ds = getDerivedStats();
@@ -38,6 +144,9 @@ export function renderHud() {
   const hpPct = ds.maxHp ? Math.max(0, Math.min(100, (state.player.hp / ds.maxHp) * 100)) : 0;
   const energyPct = ds.maxEnergy ? Math.max(0, Math.min(100, (state.player.energy / ds.maxEnergy) * 100)) : 0;
   const staminaPct = ds.maxStamina ? Math.max(0, Math.min(100, (state.player.stamina / ds.maxStamina) * 100)) : 0;
+  const hpTooltip = regenDetail('hp', state, ds);
+  const energyTooltip = regenDetail('energy', state, ds);
+  const staminaTooltip = regenDetail('stamina', state, ds);
 
   return `
     <div class="glass-strong rounded-[2rem] p-4 sm:p-6">
@@ -60,13 +169,13 @@ export function renderHud() {
             </div>
             <div class="stat-pill rounded-2xl px-3.5 py-3 shrink-0 min-w-[168px]">
               <div class="text-xs text-slate-300/65 uppercase tracking-[.14em]">Recursos listos</div>
-              <div class="text-base font-black text-emerald-300 leading-tight mt-1" data-hud-resources>${fmt(state.player.energy)}⚡ · ${fmt(state.player.stamina)}💪</div>
+              <div class="text-base font-black text-emerald-300 leading-tight mt-1 inline-flex items-center gap-2" data-hud-resources>${fmt(state.player.energy)}${icon('bolt', 'h-4 w-4')} · ${fmt(state.player.stamina)}${icon('dumbbell', 'h-4 w-4')}</div>
               <div class="text-[11px] text-slate-300/68 mt-1">Para combatir, forjar y explorar</div>
             </div>
           </div>
 
           <div class="space-y-3">
-            <div data-tooltip="Salud actual frente a tu vida máxima. Si cae demasiado, conviene pausar daño y priorizar curación o defensa.">
+            <div data-hud-resource="hp" data-tooltip-html="${escapeAttr(hpTooltip)}">
               <div class="mb-1 flex items-center justify-between gap-3 text-xs text-slate-300/80">
                 <span class="font-medium tracking-[0.01em]">Vida</span>
                 <span class="font-semibold text-slate-100" data-hud-current="hp">${fmt(state.player.hp)} / ${fmt(ds.maxHp)}</span>
@@ -77,7 +186,7 @@ export function renderHud() {
                 </span>
               </div>
             </div>
-            <div data-tooltip="Energía disponible para acciones activas como arena, mazmorra y utilidades. Si se agota, se frena tu ritmo de progreso.">
+            <div data-hud-resource="energy" data-tooltip-html="${escapeAttr(energyTooltip)}">
               <div class="mb-1 flex items-center justify-between gap-3 text-xs text-slate-300/80">
                 <span class="font-medium tracking-[0.01em]">Energía</span>
                 <span class="font-semibold text-slate-100" data-hud-current="energy">${fmt(state.player.energy)} / ${fmt(ds.maxEnergy)}</span>
@@ -88,7 +197,7 @@ export function renderHud() {
                 </span>
               </div>
             </div>
-            <div data-tooltip="Aguante para sostener actividades exigentes y rutas largas. Gestionarlo bien evita quedarte bloqueado en decisiones clave.">
+            <div data-hud-resource="stamina" data-tooltip-html="${escapeAttr(staminaTooltip)}">
               <div class="mb-1 flex items-center justify-between gap-3 text-xs text-slate-300/80">
                 <span class="font-medium tracking-[0.01em]">Aguante</span>
                 <span class="font-semibold text-slate-100" data-hud-current="stamina">${fmt(state.player.stamina)} / ${fmt(ds.maxStamina)}</span>
