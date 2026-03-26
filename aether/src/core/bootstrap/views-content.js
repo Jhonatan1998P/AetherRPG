@@ -141,7 +141,7 @@ const FORGE_MATERIAL_DEFS = [
     label: 'Esencia',
     iconName: 'spark',
     tone: 'text-sky-200 border-sky-300/25 bg-sky-400/10',
-    detail: 'Material esencial para craft, mejora y conversiones de forja.',
+    detail: 'Material esencial para fabricación, mejora y conversiones de forja.',
     quickAction: `<button type="button" class="btn !py-2 text-xs" onclick="game.setView('forja')">${icon('hammer', 'h-4 w-4')} Ir a Forja</button>`,
   },
   {
@@ -457,16 +457,16 @@ function inventoryCards() {
               ${itemStatGrid(item, 4)}
             </div>
             <div class="grid gap-2 mt-4">
-              <button type="button" class="btn btn-success !py-2.5 w-full" onclick="game.equipItem('${item.id}')">Equipar</button>
+              <button type="button" class="btn btn-success !py-2.5 w-full" onclick="game.equipItem('${item.id}')" ${tooltipAttr('Equipa esta pieza en su ranura correspondiente. Si ya tienes una equipada en ese espacio, se moverá a tu inventario.')}>Equipar</button>
               <div class="grid grid-cols-2 gap-2">
-                <button type="button" class="btn !py-2 text-xs" onclick="game.sellItem('${item.id}')">Vender</button>
-                <button type="button" class="btn !py-2 text-xs" onclick="game.salvageItem('${item.id}')">Reciclar</button>
+                <button type="button" class="btn !py-2 text-xs" onclick="game.sellItem('${item.id}')" ${tooltipAttr('Vende este objeto por oro inmediato según su valor actual. Útil para liberar espacio rápido en la mochila.')}>Vender</button>
+                <button type="button" class="btn !py-2 text-xs" onclick="game.salvageItem('${item.id}')" ${tooltipAttr(`Recicla esta pieza para recuperar materiales de forja. Rendimiento estimado: ${summarizeSalvage(salvage)}.`)}>Reciclar</button>
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <button type="button" class="btn btn-violet !py-2 text-xs" onclick="game.reforgeItem('${item.id}')" ${reforgePreview ? tooltipAttr(`Retemplado total: vuelve a tirar afijos con mayor varianza. Coste: ${formatResourceCost(reforgePreview.cost)}.`) : 'disabled'}>Retemplar</button>
                 <button type="button" class="btn btn-gold !py-2 text-xs" onclick="game.transcendItem('${item.id}')" ${transcendPreview ? tooltipAttr(`Trascender: ${transcendPreview.from} a ${transcendPreview.to}. Probabilidad de éxito ${Math.round(transcendPreview.successChance * 100)}%.`) : 'disabled'}>Trascender</button>
               </div>
-              <button type="button" class="btn !py-2 text-xs mt-2" onclick="game.stabilizeItem('${item.id}')" ${stabilizePreview ? tooltipAttr(`Estabilizar: reduce varianza y mejora consistencia de la pieza. Probabilidad ${Math.round(stabilizePreview.successChance * 100)}%. Coste: ${formatResourceCost(stabilizePreview.cost)}.`) : 'disabled'}>Stabilize</button>
+              <button type="button" class="btn !py-2 text-xs mt-2" onclick="game.stabilizeItem('${item.id}')" ${stabilizePreview ? tooltipAttr(`Estabilizar: reduce la varianza y mejora la consistencia de la pieza. Probabilidad ${Math.round(stabilizePreview.successChance * 100)}%. Coste: ${formatResourceCost(stabilizePreview.cost)}.`) : 'disabled'}>Estabilizar</button>
             </div>
           </div>
         `;
@@ -585,6 +585,7 @@ export function renderContent() {
     forja: secondaryViews.renderForja,
     gremio: secondaryViews.renderGremio,
     entrenamiento: secondaryViews.renderEntrenamiento,
+    habilidades: secondaryViews.renderHabilidades,
     trabajo: secondaryViews.renderTrabajo,
     mascota: secondaryViews.renderMascota,
     logros: secondaryViews.renderLogros,

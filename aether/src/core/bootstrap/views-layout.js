@@ -91,8 +91,8 @@ function regenDetail(resourceKey, state, ds) {
   const missing = Math.max(0, meta.max - meta.current);
   const secondsToFull = perSecondFlat > 0 ? missing / perSecondFlat : 0;
   const pctCurrent = meta.max > 0 ? clampRange((meta.current / meta.max) * 100, 0, 100) : 0;
-  const regenPerMinute = perSecondFlat * 60;
   const regenPerHour = perSecondFlat * 3600;
+  const secondsPerPoint = perSecondFlat > 0 ? Math.max(1, Math.round(1 / perSecondFlat)) : 0;
 
   return `
     <div class="space-y-2.5">
@@ -110,8 +110,8 @@ function regenDetail(resourceKey, state, ds) {
         </div>
       </div>
       <div class="grid grid-cols-2 gap-1.5 text-[11px]">
-        <div class="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"><span class="text-slate-300/72">+ / min</span><div class="font-bold text-white">${fmt(int(regenPerMinute))}</div></div>
         <div class="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"><span class="text-slate-300/72">+ / hora</span><div class="font-bold text-white">${fmt(int(regenPerHour))}</div></div>
+        <div class="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"><span class="text-slate-300/72">Cadencia</span><div class="font-bold text-white">${secondsPerPoint > 0 ? `+1 cada ${secondsPerPoint}s` : 'Sin regen'}</div></div>
       </div>
       <div class="flex items-center justify-between text-[11px]">
         <span class="text-slate-300/75">Carga completa</span>

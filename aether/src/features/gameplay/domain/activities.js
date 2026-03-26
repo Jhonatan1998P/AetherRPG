@@ -108,7 +108,7 @@ export function createActivitiesDomain(deps) {
       toast('Ya estás en expedición', 'cyan');
       return;
     }
-    const normalizedDuration = clamp(Math.round(durationSec || 0), 45, 240);
+    const normalizedDuration = clamp(Math.round(durationSec || 0), 135, 720);
     const energyCost = zone.energyCost + Math.floor(normalizedDuration / 28) + Math.ceil(zone.id / 2);
     const staminaCost = zone.staminaCost + (normalizedDuration >= 120 ? 1 : 0) + (normalizedDuration >= 240 ? 1 : 0);
     if (state.player.energy < energyCost || state.player.stamina < staminaCost) {

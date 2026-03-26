@@ -99,14 +99,14 @@ export function createSecondaryViews(deps) {
         ${pageLead('expedicion', isRunning
           ? `En curso: <b>${ZONES[state.timers.expedition.zoneId].name}</b> · <span data-live-timer="expedition">${expeditionTimerText()}</span>`
           : 'Sin expedición activa', [
-          actionButton('45s', 'btn-primary', `game.startExpedition(${state.player.zoneId}, 45)`),
-          actionButton('120s', '', `game.startExpedition(${state.player.zoneId}, 120)`),
-          actionButton('240s', 'btn-gold', `game.startExpedition(${state.player.zoneId}, 240)`)
+          actionButton('135s', 'btn-primary', `game.startExpedition(${state.player.zoneId}, 135)`),
+          actionButton('360s', '', `game.startExpedition(${state.player.zoneId}, 360)`),
+          actionButton('720s', 'btn-gold', `game.startExpedition(${state.player.zoneId}, 720)`)
         ].join(''))}
 
         ${actionBar([
-          actionButton('45s', 'btn-primary !py-3', `game.startExpedition(${state.player.zoneId}, 45)`),
-          actionButton('240s', 'btn-gold !py-3', `game.startExpedition(${state.player.zoneId}, 240)`)
+          actionButton('135s', 'btn-primary !py-3', `game.startExpedition(${state.player.zoneId}, 135)`),
+          actionButton('720s', 'btn-gold !py-3', `game.startExpedition(${state.player.zoneId}, 720)`)
         ])}
 
         <div class="grid xl:grid-cols-[1.05fr,.95fr] gap-5">
@@ -117,9 +117,9 @@ export function createSecondaryViews(deps) {
             <div class="mt-5">
               ${sectionHeader('Decisión', 'Elige duración', 'Duraciones cortas para control activo, largas para progreso pasivo.')}
               <div class="grid lg:grid-cols-3 gap-3">
-                ${durationChoiceCard(45, 'success', 'Salida corta: menor riesgo y coste moderado.')}
-                ${durationChoiceCard(120, '', 'Ruta media: mejor retorno con gasto extra de recursos.')}
-                ${durationChoiceCard(240, 'warning', 'Ruta larga: más botín, pero exige planificación.')}
+                ${durationChoiceCard(135, 'success', 'Salida corta: menor riesgo y coste moderado.')}
+                ${durationChoiceCard(360, '', 'Ruta media: mejor retorno con gasto extra de recursos.')}
+                ${durationChoiceCard(720, 'warning', 'Ruta larga: más botín, pero exige planificación.')}
               </div>
             </div>
           </section>
@@ -436,7 +436,7 @@ export function createSecondaryViews(deps) {
 
           <aside class="stack-compact">
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Decision', 'Mejorar equipado', 'Enhance sube poder, reforge ofrece modos excluyentes, stabilize reduce varianza y transcend evoluciona rareza.')}
+              ${sectionHeader('Decision', 'Mejorar equipado', 'Mejorar sube poder, retemplar ofrece modos excluyentes, estabilizar reduce varianza y trascender evoluciona rareza.')}
               <div class="space-y-3 mt-4">
                 ${['weapon', 'chest', 'ring', 'amulet'].map((slot) => {
                   const item = state.player.equipment[slot];
@@ -449,18 +449,18 @@ export function createSecondaryViews(deps) {
                       <div class="text-xs text-slate-300/55 uppercase tracking-[.18em]">${SLOT_NAMES[slot]}</div>
                        <div class="font-black break-words ${item ? `rarity-${item.rarity}` : 'text-slate-400/80'}">${item ? item.name : 'Vacío'}</div>
                       <div class="text-sm text-slate-300/70 mt-1">${item ? `Nivel ${item.level} · Mejora +${item.upgrade || 0} · Afinidad ${item.affinityLevel || 0}` : 'Equipa algo para mejorarlo.'}</div>
-                      ${item && enhance ? `<div class="text-xs text-slate-300/62 mt-2">Enhance: ${Math.round(enhance.successChance * 100)}% · Coste ${formatCostChips(enhance.cost)}</div>` : ''}
-                      ${item && reforge ? `<div class="text-xs text-slate-300/62 mt-1">Reforge total: ${Math.round(reforge.successChance * 100)}% · Coste ${formatCostChips(reforge.cost)}</div>` : ''}
+                      ${item && enhance ? `<div class="text-xs text-slate-300/62 mt-2">Mejorar: ${Math.round(enhance.successChance * 100)}% · Coste ${formatCostChips(enhance.cost)}</div>` : ''}
+                      ${item && reforge ? `<div class="text-xs text-slate-300/62 mt-1">Retemplado total: ${Math.round(reforge.successChance * 100)}% · Coste ${formatCostChips(reforge.cost)}</div>` : ''}
                       ${item && reforge && Array.isArray(reforge.modes) ? `<div class="text-xs text-slate-300/62 mt-1">Parcial ${Math.round((reforge.modes.find((m) => m.mode === 'partial')?.successChance || 0) * 100)}% · Bloqueo ${Math.round((reforge.modes.find((m) => m.mode === 'lock')?.successChance || 0) * 100)}%</div>` : ''}
-                      ${item && stabilize ? `<div class="text-xs text-slate-300/62 mt-1">Stabilize: ${Math.round(stabilize.successChance * 100)}% · Coste ${formatCostChips(stabilize.cost)}</div>` : ''}
-                      ${item && transcend ? `<div class="text-xs text-slate-300/62 mt-1">Transcend: ${Math.round(transcend.successChance * 100)}% · ${transcend.from} → ${transcend.to}</div>` : ''}
+                      ${item && stabilize ? `<div class="text-xs text-slate-300/62 mt-1">Estabilizar: ${Math.round(stabilize.successChance * 100)}% · Coste ${formatCostChips(stabilize.cost)}</div>` : ''}
+                      ${item && transcend ? `<div class="text-xs text-slate-300/62 mt-1">Trascender: ${Math.round(transcend.successChance * 100)}% · ${transcend.from} → ${transcend.to}</div>` : ''}
                       <div class="grid grid-cols-2 gap-2 mt-3">
-                        <button type="button" class="btn btn-gold !py-2" ${item ? `onclick="game.enhanceItem('${slot}')"` : 'disabled'} ${tooltipAttr('Mejora incremental y relativamente estable de la pieza equipada. Recomendado cuando ya estás conforme con sus afijos.')}>Enhance</button>
-                        <button type="button" class="btn btn-violet !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'total'})"` : 'disabled'} ${tooltipAttr('Retemplado total: vuelve a tirar la pieza completa. Menor coste, pero con mayor varianza en resultado final.')}>Reforge total</button>
-                        <button type="button" class="btn !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'partial'})"` : 'disabled'} ${tooltipAttr('Retemplado parcial: conserva más estructura de la pieza. Cuesta más, pero reduce cambios extremos.')}>Reforge parcial</button>
-                        <button type="button" class="btn !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'lock'})"` : 'disabled'} ${tooltipAttr('Retemplado con bloqueo: protege tu stat principal para minimizar pérdidas en la tirada.')}>Reforge bloqueo</button>
-                        <button type="button" class="btn !py-2" ${item && stabilize ? `onclick="game.stabilizeItem('${item.id}')"` : 'disabled'} ${tooltipAttr('Estabiliza la pieza para mejorar consistencia y control de varianza sin destruirla.')}>Stabilize</button>
-                        <button type="button" class="btn !py-2 col-span-2" ${item && transcend ? `onclick="game.transcendItem('${item.id}')"` : 'disabled'} ${tooltipAttr('Trascender intenta elevar la rareza. Exige requisitos y coste alto, pero abre un techo de poder superior.')}>Transcend</button>
+                        <button type="button" class="btn btn-gold !py-2" ${item ? `onclick="game.enhanceItem('${slot}')"` : 'disabled'} ${tooltipAttr('Mejora incremental y relativamente estable de la pieza equipada. Recomendado cuando ya estás conforme con sus afijos.')}>Mejorar</button>
+                        <button type="button" class="btn btn-violet !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'total'})"` : 'disabled'} ${tooltipAttr('Retemplado total: vuelve a tirar la pieza completa. Menor coste, pero con mayor varianza en el resultado final.')}>Retemplado total</button>
+                        <button type="button" class="btn !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'partial'})"` : 'disabled'} ${tooltipAttr('Retemplado parcial: conserva más estructura de la pieza. Cuesta más, pero reduce cambios extremos.')}>Retemplado parcial</button>
+                        <button type="button" class="btn !py-2" ${item ? `onclick="game.reforgeItem({itemId:'${item.id}', mode:'lock'})"` : 'disabled'} ${tooltipAttr('Retemplado con bloqueo: protege tu estadística principal para minimizar pérdidas en la tirada.')}>Retemplado con bloqueo</button>
+                        <button type="button" class="btn !py-2" ${item && stabilize ? `onclick="game.stabilizeItem('${item.id}')"` : 'disabled'} ${tooltipAttr('Estabiliza la pieza para mejorar consistencia y control de varianza sin destruirla.')}>Estabilizar</button>
+                        <button type="button" class="btn !py-2 col-span-2" ${item && transcend ? `onclick="game.transcendItem('${item.id}')"` : 'disabled'} ${tooltipAttr('Trascender intenta elevar la rareza. Exige requisitos y coste alto, pero abre un techo de poder superior.')}>Trascender</button>
                       </div>
                     </div>
                   `;
@@ -469,7 +469,7 @@ export function createSecondaryViews(deps) {
             </div>
 
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Conversion', 'Materiales y reciclaje', 'Convierte excedentes de bajo tier a recursos de valor medio y alto con perdida controlada.')}
+              ${sectionHeader('Conversion', 'Materiales y reciclaje', 'Convierte excedentes de bajo nivel a recursos de valor medio y alto con pérdida controlada.')}
               <div class="grid gap-2">
                 <button type="button" class="btn" onclick="game.convertMaterials('iron_wood_to_essence')">20 Hierro + 12 Madera + 80 Oro → 1 Esencia</button>
                 <button type="button" class="btn" onclick="game.convertMaterials('essence_to_sigils')">8 Esencia + 120 Oro → 1 Sigilo</button>
@@ -478,11 +478,11 @@ export function createSecondaryViews(deps) {
             </div>
 
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Soporte', 'Pity y regla de gasto')}
+              ${sectionHeader('Soporte', 'Racha y regla de gasto')}
               <div class="grid gap-3">
-                ${infoCard('Pity forja', `Epic en ${forgePity.epic} intentos sin hito · Mythic en ${forgePity.mythic}.`, 'surface-subtle')}
-                ${infoCard('Pity mercado', `Epic en ${marketPity.epic} rotaciones sin hito · Mythic en ${marketPity.mythic}.`, 'surface-subtle')}
-                ${infoCard('Pity acciones', `Enhance ${actionPity.enhance} · Reforge ${actionPity.reforge} · Stabilize ${actionPity.stabilize} · Transcend ${actionPity.transcend}`, 'surface-subtle')}
+                ${infoCard('Racha forja', `Épica en ${forgePity.epic} intentos sin hito · Mítica en ${forgePity.mythic}.`, 'surface-subtle')}
+                ${infoCard('Racha mercado', `Épica en ${marketPity.epic} rotaciones sin hito · Mítica en ${marketPity.mythic}.`, 'surface-subtle')}
+                ${infoCard('Racha acciones', `Mejorar ${actionPity.enhance} · Retemplar ${actionPity.reforge} · Estabilizar ${actionPity.stabilize} · Trascender ${actionPity.transcend}`, 'surface-subtle')}
                 ${infoCard('Estrategia', 'Hierro para volumen, esencia para mejoras, sigilos/catalizadores/echo para profundidad tardía.', 'surface-subtle')}
               </div>
             </div>
@@ -548,16 +548,20 @@ export function createSecondaryViews(deps) {
   }
 
   function renderEntrenamiento() {
+    const activeSkills = state.player.activeSkills
+      .map((id) => SKILLS[id])
+      .filter(Boolean);
     return `
       <div class="space-y-5">
-        ${pageLead('entrenamiento', `Puntos de atributo: <b>${state.player.attributePoints}</b> · habilidades: <b>${state.player.skillPoints}</b>`, [
+        ${pageLead('entrenamiento', `Puntos de atributo: <b>${state.player.attributePoints}</b>`, [
+          actionButton('⚡ Habilidades', 'btn-violet', "game.setView('habilidades')"),
           actionButton('👤 Perfil', '', "game.setView('perfil')"),
           actionButton('⚔️ Arena', 'btn-primary', "game.setView('arena')")
         ].join(''))}
 
-        <div class="grid xl:grid-cols-[.95fr,1.05fr] gap-5">
+        <div class="grid xl:grid-cols-[1fr,340px] gap-5">
           <section class="glass rounded-3xl p-5">
-            ${sectionHeader('Contexto', 'Atributos base', 'Primero ajusta base estadística; después pule habilidades activas.')}
+            ${sectionHeader('Contexto', 'Atributos base', 'Ajusta tu base estadística para sostener mejor daño, ritmo y supervivencia.')}
             <div class="grid sm:grid-cols-2 gap-3">
               ${[
                 ['strength', 'Fuerza', 'Ataque y robo de vida.'],
@@ -575,20 +579,164 @@ export function createSecondaryViews(deps) {
             </div>
           </section>
 
-          <aside class="glass rounded-3xl p-5">
-            ${sectionHeader('Decisión', 'Habilidades activas')}
-            <div class="space-y-3">
-              ${Object.values(SKILLS).map((skill) => `
-                <div class="glass rounded-2xl p-4">
-                  <div class="font-black">${skill.name}</div>
-                  <div class="text-sm text-slate-300/75 mt-1">${skill.desc}</div>
-                  <div class="text-xs text-slate-300/60 mt-2">Recarga ${skill.cooldown} · Desbloqueo Nv ${skill.unlockLevel}</div>
-                  <div class="grid grid-cols-2 gap-2 mt-3">
-                    <button type="button" class="btn !py-2" onclick="game.toggleActiveSkill('${skill.id}')">${state.player.activeSkills.includes(skill.id) ? 'Quitar' : 'Equipar'}</button>
-                    <button type="button" class="btn btn-violet !py-2" ${state.player.unlockedSkills.includes(skill.id) ? `onclick="game.upgradeSkill('${skill.id}')"` : 'disabled'}>Mejorar</button>
+          <aside class="stack-compact">
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Habilidades', 'Gestión dedicada')}
+              <div class="grid gap-3">
+                ${infoCard('Puntos de habilidad', `${state.player.skillPoints} disponibles para mejorar habilidades desbloqueadas.`, 'surface-subtle')}
+                ${infoCard('Activas', `${activeSkills.length}/4 equipadas para combate.`, 'surface-subtle')}
+              </div>
+              <button type="button" class="btn btn-violet mt-4 w-full" onclick="game.setView('habilidades')">Abrir vista de habilidades</button>
+            </div>
+
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Soporte', 'Regla rápida')}
+              <div class="grid gap-3">
+                ${infoCard('Primero base', 'Sube atributos cuando te falte estabilidad general en combate.', 'surface-subtle')}
+                ${infoCard('Después especializa', 'Mejora habilidades cuando ya tengas una rotación activa clara.', 'surface-subtle')}
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderHabilidades() {
+    const allSkills = Object.values(SKILLS);
+    const sortedSkills = [...allSkills].sort((a, b) => {
+      const aUnlocked = state.player.unlockedSkills.includes(a.id) ? 1 : 0;
+      const bUnlocked = state.player.unlockedSkills.includes(b.id) ? 1 : 0;
+      const aActive = state.player.activeSkills.includes(a.id) ? 1 : 0;
+      const bActive = state.player.activeSkills.includes(b.id) ? 1 : 0;
+      if (bActive !== aActive) return bActive - aActive;
+      if (bUnlocked !== aUnlocked) return bUnlocked - aUnlocked;
+      return Number(a.unlockLevel || 1) - Number(b.unlockLevel || 1);
+    });
+    const activeCount = state.player.activeSkills.length;
+    const unlockedCount = allSkills.filter((skill) => state.player.unlockedSkills.includes(skill.id)).length;
+    const avgLevel = allSkills.length
+      ? (allSkills.reduce((sumValue, skill) => sumValue + Number(state.player.skillLevels[skill.id] || 1), 0) / allSkills.length)
+      : 1;
+
+    const formatBuffList = (buff = {}) => {
+      const entries = Object.entries(buff).filter(([key]) => key !== 'turns' && key !== 'shieldPct');
+      const labels = entries.map(([key, value]) => {
+        const sign = Number(value) >= 0 ? '+' : '';
+        const isPct = ['crit', 'dodge', 'block', 'lifesteal', 'attackPct', 'defensePct', 'hpPct', 'speedPct', 'goldPct', 'lootLuck', 'regenPct'].includes(key);
+        return `${statLabel(key)} ${sign}${isPct ? pct(value) : fmt(value)}`;
+      });
+      if (buff.shieldPct) labels.push(`Escudo inicial +${pct(buff.shieldPct)}`);
+      if (buff.turns) labels.push(`Duración ${buff.turns} turnos`);
+      return labels.join(' · ');
+    };
+
+    const formatUsage = (skill) => {
+      const lines = [];
+      lines.push(`Recarga: ${skill.cooldown} turnos`);
+      lines.push(`Desbloqueo: nivel ${skill.unlockLevel}`);
+      if (skill.requireOffhand) lines.push('Requiere escudo o mano izquierda equipada');
+      if (skill.executeThreshold) lines.push(`Ejecuta mejor por debajo de ${Math.round(skill.executeThreshold * 100)}% de vida enemiga`);
+      if (skill.hits) lines.push(`Realiza ${skill.hits} impactos en el mismo turno`);
+      return lines.join(' · ');
+    };
+
+    const detailChips = (skill) => {
+      const tags = [];
+      if (skill.critBonus) tags.push(`Crítico +${pct(skill.critBonus)}`);
+      if (skill.lifestealBonus) tags.push(`Robo de vida +${pct(skill.lifestealBonus)}`);
+      if (skill.armorBreak) tags.push(`Rompe armadura ${pct(skill.armorBreak.pct)} por ${skill.armorBreak.turns} turnos`);
+      if (skill.dot) tags.push(`${skill.dot.label}: ${pct(skill.dot.ratio)} por ${skill.dot.turns} turnos`);
+      if (skill.selfBuff) tags.push(`Auto-mejora: ${formatBuffList(skill.selfBuff)}`);
+      if (skill.executeThreshold && skill.executeMult) tags.push(`Daño de ejecución x${fmt(skill.executeMult)}`);
+      return tags.length
+        ? tags.map((tag) => `<span class="inline-flex items-center rounded-full border border-white/15 bg-white/[.04] px-2 py-1 text-[11px] text-slate-200/85">${tag}</span>`).join('')
+        : '<span class="text-slate-300/62 text-xs">Sin efectos secundarios adicionales.</span>';
+    };
+
+    return `
+      <div class="space-y-5">
+        ${pageLead('habilidades', `Activas: <b>${activeCount}/4</b> · Desbloqueadas: <b>${unlockedCount}/${allSkills.length}</b> · Puntos: <b>${state.player.skillPoints}</b>`, [
+          actionButton('🏋️ Entrenamiento', '', "game.setView('entrenamiento')"),
+          actionButton('⚔️ Arena', 'btn-primary', "game.setView('arena')"),
+          actionButton('🎒 Inventario', 'btn-violet', "game.setView('inventario')")
+        ].join(''))}
+
+        <div class="grid xl:grid-cols-[1fr,340px] gap-5">
+          <section class="glass rounded-3xl p-5">
+            ${sectionHeader('Panel de habilidades', 'Detalle de uso y potencia', 'Aquí decides qué habilidad equipar, cuándo subirla y cómo encaja en tu rotación de combate.')}
+
+            <div class="grid sm:grid-cols-4 gap-3 mb-4">
+              ${htmlStat('Activas', `${activeCount}/4`, 'Ranuras en uso')}
+              ${htmlStat('Desbloqueadas', `${unlockedCount}/${allSkills.length}`, 'Disponibles por nivel')}
+              ${htmlStat('Puntos', state.player.skillPoints, 'Para mejoras directas')}
+              ${htmlStat('Nivel medio', avgLevel.toFixed(1), 'Promedio de todas tus habilidades')}
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-3">
+              ${sortedSkills.map((skill) => {
+                const unlocked = state.player.unlockedSkills.includes(skill.id);
+                const active = state.player.activeSkills.includes(skill.id);
+                const level = Number(state.player.skillLevels[skill.id] || 1);
+                const maxed = level >= 5;
+                const canUpgrade = unlocked && state.player.skillPoints > 0 && !maxed;
+                const levelFactor = 1 + Math.max(0, level - 1) * 0.08;
+                const nextLevelFactor = 1 + level * 0.08;
+                const currentMult = (skill.mult || 1) * levelFactor;
+                const nextMult = (skill.mult || 1) * nextLevelFactor;
+                const lockText = unlocked
+                  ? 'Disponible'
+                  : `Se desbloquea en nivel ${skill.unlockLevel}`;
+                return `
+                  <div class="glass rounded-2xl p-4 ${active ? 'ring ring-cyan-300/30 bg-cyan-400/8' : ''}">
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <div class="font-black leading-tight">${skill.name}</div>
+                        <div class="text-xs text-slate-300/62 mt-1">${skill.desc}</div>
+                      </div>
+                      <div>${active ? statusChip('Activa', 'success') : unlocked ? statusChip('Lista') : statusChip('Bloqueada', 'warning')}</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 mt-3 text-sm">
+                      <div class="rounded-xl bg-white/[.04] p-2.5">Nivel actual <b>${level}/5</b></div>
+                      <div class="rounded-xl bg-white/[.04] p-2.5">Daño base <b>x${fmt(currentMult)}</b></div>
+                      <div class="rounded-xl bg-white/[.04] p-2.5">Siguiente nivel <b>${maxed ? 'Máximo' : `x${fmt(nextMult)}`}</b></div>
+                      <div class="rounded-xl bg-white/[.04] p-2.5">Estado <b>${lockText}</b></div>
+                    </div>
+
+                    <div class="text-xs text-slate-300/68 mt-3" ${tooltipAttr('Describe cuándo conviene usar la habilidad según recarga, requisitos y condición de ejecución.')}>${formatUsage(skill)}</div>
+
+                    <div class="inline-flex flex-wrap gap-1.5 mt-3">
+                      ${detailChips(skill)}
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 mt-4">
+                      <button type="button" class="btn !py-2" ${unlocked ? `onclick="game.toggleActiveSkill('${skill.id}')"` : 'disabled'} ${tooltipAttr(active ? 'Quita esta habilidad de tu rotación activa actual.' : 'Equipa esta habilidad para usarla en combate automático y manual.')}>${active ? 'Quitar' : 'Equipar'}</button>
+                      <button type="button" class="btn btn-violet !py-2" ${canUpgrade ? `onclick="game.upgradeSkill('${skill.id}')"` : 'disabled'} ${tooltipAttr(maxed ? 'Ya alcanzó el nivel máximo (5/5).' : unlocked ? 'Gasta 1 punto de habilidad para subir potencia y escalado.' : 'Debes alcanzar el nivel requerido para desbloquear esta habilidad.')}>${maxed ? 'Máximo' : 'Mejorar'}</button>
+                    </div>
                   </div>
-                </div>
-              `).join('')}
+                `;
+              }).join('')}
+            </div>
+          </section>
+
+          <aside class="stack-compact">
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Uso recomendado', 'Orden de decisión intuitivo')}
+              <div class="grid gap-3">
+                ${infoCard('1) Asegura base', 'Mantén al menos una habilidad defensiva o de control para no colapsar en combates largos.', 'surface-subtle')}
+                ${infoCard('2) Define tu rol', 'Después prioriza daño explosivo, daño sostenido o ejecución según tu estilo de juego.', 'surface-subtle')}
+                ${infoCard('3) Invierte puntos', 'Sube primero habilidades activas que uses siempre; evita dispersar puntos sin plan.', 'surface-subtle')}
+              </div>
+            </div>
+
+            <div class="glass rounded-3xl p-5">
+              ${sectionHeader('Lectura rápida', 'Qué mirar en cada habilidad')}
+              <div class="grid gap-3">
+                ${infoCard('Recarga', 'Menor recarga = mayor frecuencia de uso en la rotación.', 'surface-subtle')}
+                ${infoCard('Condición', 'Ejecución, mano izquierda o estado del rival cambian su valor real.', 'surface-subtle')}
+                ${infoCard('Escalado', 'Cada nivel aumenta el multiplicador final de daño de la habilidad.', 'surface-subtle')}
+              </div>
             </div>
           </aside>
         </div>
@@ -732,7 +880,7 @@ export function createSecondaryViews(deps) {
 
           <aside class="stack-compact">
             <div class="glass rounded-3xl p-5">
-              ${sectionHeader('Incubadora', 'Rituales y costes', 'Cada ritual cambia probabilidades por tier y coste total. Pity de tiers altos incluido.')}
+              ${sectionHeader('Incubadora', 'Rituales y costes', 'Cada ritual cambia probabilidades por tier y coste total. Incluye racha para tiers altos.')}
               <div class="grid gap-3">
                 ${ritualCards.map((ritualData) => {
                   const ritual = ritualData.ritual;
@@ -968,6 +1116,7 @@ export function createSecondaryViews(deps) {
     renderForja,
     renderGremio,
     renderEntrenamiento,
+    renderHabilidades,
     renderTrabajo,
     renderMascota,
     renderLogros,

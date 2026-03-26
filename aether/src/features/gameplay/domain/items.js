@@ -512,13 +512,20 @@ export function createItemsDomain(deps) {
   }
 
   function rollLoot(context = {}) {
-    const source = context.source || 'arena';
-    const threatScore = Number(context.threatScore || context.enemyThreat || 100);
-    const pityUnits = typeof context.pityUnits === 'number'
-      ? clamp(context.pityUnits, 0.5, 2)
+    const normalizedContext = { ...context };
+    if (normalizedContext.playerLevel !== undefined && normalizedContext.playerLevel !== null) {
+      const playerLevel = Math.max(1, Math.round(Number(normalizedContext.playerLevel) || 1));
+      normalizedContext.playerLevel = playerLevel;
+      normalizedContext.itemLevel = playerLevel;
+    }
+
+    const source = normalizedContext.source || 'arena';
+    const threatScore = Number(normalizedContext.threatScore || normalizedContext.enemyThreat || 100);
+    const pityUnits = typeof normalizedContext.pityUnits === 'number'
+      ? clamp(normalizedContext.pityUnits, 0.5, 2)
       : clamp(threatScore / 100, 0.85, 1.35);
-    const item = makeItemFromBudget(context);
-    const nextStreakData = nextPity(source, context.streakData || {}, item.rarity, pityUnits);
+    const item = makeItemFromBudget(normalizedContext);
+    const nextStreakData = nextPity(source, normalizedContext.streakData || {}, item.rarity, pityUnits);
     const sourcePity = pityFor(source, nextStreakData);
 
     return {

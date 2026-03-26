@@ -187,8 +187,8 @@ import { AetherViewContent } from './views-content.js';
       const missing = Math.max(0, meta.max - meta.current);
       const secondsToFull = perSecondFlat > 0 ? missing / perSecondFlat : 0;
       const pctCurrent = meta.max > 0 ? clamp((meta.current / meta.max) * 100, 0, 100) : 0;
-      const regenPerMinute = perSecondFlat * 60;
       const regenPerHour = perSecondFlat * 3600;
+      const secondsPerPoint = perSecondFlat > 0 ? Math.max(1, Math.round(1 / perSecondFlat)) : 0;
 
       return `
         <div class="space-y-2.5">
@@ -206,8 +206,8 @@ import { AetherViewContent } from './views-content.js';
             </div>
           </div>
           <div class="grid grid-cols-2 gap-1.5 text-[11px]">
-            <div class="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"><span class="text-slate-300/72">+ / min</span><div class="font-bold text-white">${fmt(int(regenPerMinute))}</div></div>
             <div class="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"><span class="text-slate-300/72">+ / hora</span><div class="font-bold text-white">${fmt(int(regenPerHour))}</div></div>
+            <div class="rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5"><span class="text-slate-300/72">Cadencia</span><div class="font-bold text-white">${secondsPerPoint > 0 ? `+1 cada ${secondsPerPoint}s` : 'Sin regen'}</div></div>
           </div>
           <div class="flex items-center justify-between text-[11px]">
             <span class="text-slate-300/75">Carga completa</span>
@@ -827,7 +827,7 @@ import { AetherViewContent } from './views-content.js';
     function tooltipTargetFromEvent(event) {
       const raw = event.target;
       if (!(raw instanceof Element)) return null;
-      return raw.closest('[data-tooltip]');
+      return raw.closest('[data-tooltip], [data-tooltip-html]');
     }
 
     function hudResourceTooltipTargetFromEvent(event) {
@@ -908,6 +908,17 @@ import { AetherViewContent } from './views-content.js';
       if (isCoarsePointer()) return;
       const target = tooltipTargetFromEvent(event);
       if (target) hideTooltip(target);
+    });
+    document.addEventListener('focusin', (event) => {
+      const target = tooltipTargetFromEvent(event);
+      if (target) showTooltip(target);
+    });
+    document.addEventListener('focusout', (event) => {
+      const target = tooltipTargetFromEvent(event);
+      if (!target) return;
+      const nextFocused = event.relatedTarget;
+      if (nextFocused instanceof Element && (target === nextFocused || target.contains(nextFocused))) return;
+      hideTooltip(target);
     });
     document.addEventListener('pointerdown', (event) => {
       if (!isCoarsePointer()) return;
@@ -1023,7 +1034,7 @@ import { AetherViewContent } from './views-content.js';
     const beforeStamina = state.player.stamina;
 
     mutate('system/tick', () => {
-      const elapsed = clamp((now - state.lastTick) / 1000, 0, document.hidden ? 30 : 5);
+      const elapsed = clamp((now - state.lastTick) / 1000, 0, 60 * 60 * 12);
       state.lastTick = now;
 
       Systems.passiveRegen(elapsed);

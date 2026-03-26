@@ -968,9 +968,9 @@ export const REWARD_CURVES = {
 };
 
 export const JOBS = [
-  { id: 'guardia', name: 'Guardia del Foro', duration: 70, reward: { gold: 130, xp: 22, food: 1 }, desc: 'Trabajo seguro y lento: rendimiento estable sin riesgo de combate.' },
-  { id: 'mercante', name: 'Estiba de Mercaderes', duration: 130, reward: { gold: 230, xp: 36, wood: 2, iron: 1 }, desc: 'Comision moderada con mejor retorno si sostienes el ciclo.' },
-  { id: 'arena', name: 'Espectaculo Menor', duration: 210, reward: { gold: 390, xp: 58, essence: 1, potions: 1 }, desc: 'Ruta larga de oro: menos explosiva, mas util para progreso por etapas.' },
+  { id: 'guardia', name: 'Guardia del Foro', duration: 350, reward: { gold: 130, xp: 22, food: 1 }, desc: 'Trabajo seguro y lento: rendimiento estable sin riesgo de combate.' },
+  { id: 'mercante', name: 'Estiba de Mercaderes', duration: 650, reward: { gold: 230, xp: 36, wood: 2, iron: 1 }, desc: 'Comision moderada con mejor retorno si sostienes el ciclo.' },
+  { id: 'arena', name: 'Espectaculo Menor', duration: 1050, reward: { gold: 390, xp: 58, essence: 1, potions: 1 }, desc: 'Ruta larga de oro: menos explosiva, mas util para progreso por etapas.' },
 ];
 
 export const PET_RITUALS = [
@@ -1035,7 +1035,7 @@ export const SKILLS = {
   quickLunge: {
     id: 'quickLunge',
     name: 'Estocada veloz',
-    desc: 'Golpe rapido con extra de critico.',
+    desc: 'Golpe rápido con extra de crítico.',
     unlockLevel: 1,
     cooldown: 2,
     mult: 1.15,
@@ -1062,7 +1062,7 @@ export const SKILLS = {
   },
   bloodRage: {
     id: 'bloodRage',
-    name: 'Rabia sanguinea',
+    name: 'Rabia sanguínea',
     desc: 'Gran drenaje de vida en el impacto.',
     unlockLevel: 7,
     cooldown: 5,
@@ -1080,8 +1080,8 @@ export const SKILLS = {
   },
   execution: {
     id: 'execution',
-    name: 'Ejecucion',
-    desc: 'Hace muchisimo mas dano a enemigos debilitados.',
+    name: 'Ejecución',
+    desc: 'Hace muchísimo más daño a enemigos debilitados.',
     unlockLevel: 12,
     cooldown: 4,
     mult: 1.2,
@@ -1090,8 +1090,8 @@ export const SKILLS = {
   },
   venomCut: {
     id: 'venomCut',
-    name: 'Corte toxico',
-    desc: 'Aplica dano persistente.',
+    name: 'Corte tóxico',
+    desc: 'Aplica daño persistente.',
     unlockLevel: 14,
     cooldown: 4,
     mult: 1.08,
@@ -1109,7 +1109,7 @@ export const SKILLS = {
   celestialEdge: {
     id: 'celestialEdge',
     name: 'Filo celestial',
-    desc: 'Golpe definitivo con alto critico.',
+    desc: 'Golpe definitivo con alto crítico.',
     unlockLevel: 22,
     cooldown: 7,
     mult: 2.25,

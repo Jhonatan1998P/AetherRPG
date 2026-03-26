@@ -1496,7 +1496,7 @@ export function createEconomyDomain(deps) {
       return;
     }
 
-    const evolved = makeItem(item.slot, (item.itemLevel || item.level || state.player.level) + 2, targetRarity, item.baseName, 1);
+    const evolved = makeItem(item.slot, state.player.level, targetRarity, item.baseName, 1);
     item.rarity = targetRarity;
     item.tier = rarityDef(targetRarity).order;
     item.stats = evolved.stats;
